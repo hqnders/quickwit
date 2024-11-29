@@ -1,6 +1,7 @@
 """Contains the cog for handling registrations, as well as the necessary UI elements"""
 from inspect import getmembers, isclass
 from logging import getLogger
+from dataclasses import fields
 import discord
 from discord.ext import commands
 from quickwit import events, utils
@@ -27,9 +28,15 @@ class EventView(discord.ui.View):
                              style=discord.ButtonStyle.success, row=4)
 
         async def callback(self, interaction: discord.Interaction):
-            if self.view.registration_data.get(interaction.user.id, None) is None:
-                await interaction.response.send_message("Please select an attendance status", ephemeral=True)
+            registration_data = self.view.registration_data.get(interaction.user.id, None)  # type: events.Event.Registration # noqa
+            if registration_data is None:
+                await interaction.response.send_message("Please fill out your registration informaion", ephemeral=True)
                 return
+
+            for field in fields(registration_data):
+                if getattr(registration_data, field.name) is None:
+                    await interaction.response.send_message(f"Could not find value for {field.name}, please resubmit registration", ephemeral=True)
+                    return
 
             interaction.client.dispatch(
                 'register', interaction.channel_id, interaction.user.id, self.view.registration_data[interaction.user.id])
