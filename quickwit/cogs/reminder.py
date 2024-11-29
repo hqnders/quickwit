@@ -32,7 +32,8 @@ class Reminder(commands.Cog):
             message = MESSAGE_FORMAT.format(
                 name=stored_event.event.name, organiser=stored_event.event.organiser_id, start=start)
             for user_id in stored_event.event.registrations.keys():
-                message += f'<@{user_id}>'
+                if user_id != stored_event.event.organiser_id:
+                    message += f'<@{user_id}>'
             await channel.send(message)
             getLogger(__name__).info(
                 f'Sent reminder for event {stored_event.event.name}')
