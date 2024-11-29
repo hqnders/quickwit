@@ -164,9 +164,5 @@ cython_debug/
 # Visual Studio Code
 .vscode/
 
-# Databases
-**/*.db
-
 # Resources
-resources/img/*
-!resources/img/default.png
+data/

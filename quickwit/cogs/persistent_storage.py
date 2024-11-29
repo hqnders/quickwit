@@ -11,6 +11,7 @@ import quickwit.cogs.storage as storage
 
 class PersistentStorage(storage.Storage, name='Storage'):
     """Cog for persistent event storage"""
+    _DATA_FOLDER_NAME = 'data'
     _DATABASE_NAME = 'events.db'
     _SCRIPTS_PATH = 'resources/sql'
     _CREATION_SCRIPT_NAME = 'create'
@@ -20,7 +21,8 @@ class PersistentStorage(storage.Storage, name='Storage'):
 
     def __init__(self, bot: commands.Bot):
         super().__init__(bot)
-        self._connection = sqlite3.connect(self._DATABASE_NAME)
+        self._connection = sqlite3.connect(os.path.join(
+            self._DATA_FOLDER_NAME, self._DATABASE_NAME))
         self._scripts = {}  # type: dict[str, str]
         for file in os.listdir(self._SCRIPTS_PATH):
             self._scripts[file.split('.')[0]] = ''.join(open(
@@ -30,22 +32,22 @@ class PersistentStorage(storage.Storage, name='Storage'):
             self._scripts[self._CREATION_SCRIPT_NAME])
         self._connection.commit()
 
-    def set_timezone(self, user_id: int, timezone: str):
-        super().set_timezone(user_id, timezone)
+    def set_timezone(self, user_id: int, user_timezone: str):
+        super().set_timezone(user_id, user_timezone)
         self._connection.execute(
-            self._scripts[self._SET_TIMEZONE_SCRIPT_NAME], [user_id, timezone])
+            self._scripts[self._SET_TIMEZONE_SCRIPT_NAME], [user_id, user_timezone])
         self._connection.commit()
 
     def get_timezone(self, user_id: int) -> str:
-        timezone = super().get_timezone(user_id)
-        if timezone != 'UTC':
-            return timezone
+        user_timezone = super().get_timezone(user_id)
+        if user_timezone != 'UTC':
+            return user_timezone
         result = self._connection.execute(
             'SELECT timezone FROM UserTimezones WHERE user_id=?', [user_id]).fetchone()
         if result is not None:
-            timezone = result[0]
-        super().set_timezone(user_id, timezone)
-        return timezone
+            user_timezone = result[0]
+        super().set_timezone(user_id, user_timezone)
+        return user_timezone
 
     def register_user(self, channel_id: int, user_id: int, registration: events.Event.Registration):
         self._ensure_cached_event(channel_id)
