@@ -32,6 +32,7 @@ class FF14Event(JobEvent):
         """Only difference here is the job"""
         class Job(Enum):
             """Represents FF14 jobs and their Discord emoji"""
+            ALL_ROUNDER = ('Allrounder', '<:Allrounder:1302305556966539346>')
             WAR = ('Warrior', '<:Warrior:1302300106103455835>')
             PLD = ('Paladin', '<:Paladin:1302300099103166565>')
             DRK = ('Dark Knight', '<:DarkKnight:1302300076600725616>')
@@ -52,9 +53,8 @@ class FF14Event(JobEvent):
             BLM = ('Black Mage', '<:BlackMage:1302300194045694023>')
             SMN = ('Summoner', '<:Summoner:1302300220490776656>')
             RDM = ('Red Mage', '<:RedMage:1302300210923569183>')
-            BLU = ('Blue Mage', '<:BlueMage:1302300345069994004>')
             PCT = ('Pictomancer', '<:Pictomancer:1302304017107652782>')
-            ALL_ROUNDER = ('Allrounder', '<:Allrounder:1302305556966539346')
+            BLU = ('Blue Mage', '<:BlueMage:1302300345069994004>')
     REPRESENTATION = ('Final Fantasy XIV', '<:FF14:1302571147258236949>')
 
 
@@ -64,8 +64,8 @@ class FashionShow(JobEvent):
         """Only difference here is the job"""
         class Job(Enum):
             """Represents fashion show jobs and their Discord emoji"""
-            MODEL = ('Model', '<:Model:1303499055434960937>')
             CROWD = ('Crowd', '<:Crowd:1303499075865415731>')
+            MODEL = ('Model', '<:Model:1303499055434960937>')
             JUDGE = ('Judge', '<:Judge:1303499086363758732>')
     REPRESENTATION = ('Fashion Show', '<:FashionShow:1303500090710687785>')
 
@@ -76,6 +76,6 @@ class CampfireEvent(JobEvent):
         """Only difference here is the job"""
         class Job(Enum):
             """Represents campfire event jobs and their Discord emoji"""
-            SPEAKER = ('Speaker', '<:Speaker:1303499095217930250>')
             CROWD = ('Crowd', '<:Crowd:1303499075865415731>')
+            SPEAKER = ('Speaker', '<:Speaker:1303499095217930250>')
     REPRESENTATION = ('Campfire Event', '<:Campfire:1303500098306572388>')

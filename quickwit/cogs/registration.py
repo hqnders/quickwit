@@ -155,3 +155,44 @@ class Registration(commands.Cog):
         event = storage_cog.get_event(channel_id)
         if event is not None:
             await message.edit(content=event.event.message())
+
+    @commands.Cog.listener()
+    async def on_scheduled_event_user_add(self, event: discord.ScheduledEvent, user: discord.User):
+        """Listens to a user joining a scheduled event
+
+        Args:
+            event (discord.ScheduledEvent): The event in question
+            user (discord.User): The user registering
+        """
+        storage_cog = self.bot.get_cog('Storage')  # type: storage.Storage
+        channel_id = int(event.location.split('#')[1].split('>')[0])
+        stored_event = storage_cog.get_event(channel_id)
+        if stored_event is None:
+            return
+        registration_type = stored_event.event.Registration
+        registration = registration_type(
+            status=registration_type.Status.ATTENDING)
+        if isinstance(registration, events.JobEvent.Registration):
+            for job in registration.Job:
+                registration.job = job
+                break
+        await self.on_register(channel_id, user.id, registration)
+        channel = await utils.grab_by_id(channel_id, self.bot.get_channel, self.bot.fetch_channel)
+        await channel.send(f'{user.display_name} Registered through the Scheduled Event link')
+
+    @commands.Cog.listener()
+    async def on_scheduled_event_user_remove(self, event: discord.ScheduledEvent, user: discord.User):
+        """Listens to a user leaving the scheduled event
+
+        Args:
+            event (discord.ScheduledEvent): The event in question
+            user (discord.User): The user unregistering
+        """
+        storage_cog = self.bot.get_cog('Storage')  # type: storage.Storage
+        channel_id = int(event.location.split('#')[1].split('>')[0])
+        stored_event = storage_cog.get_event(channel_id)
+        if stored_event is None:
+            return
+        await self.on_unregister(channel_id, user.id)
+        channel = await utils.grab_by_id(channel_id, self.bot.get_channel, self.bot.fetch_channel)
+        await channel.send(f'{user.display_name} Unregistered through the Scheduled Event link')
