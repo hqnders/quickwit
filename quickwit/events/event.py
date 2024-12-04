@@ -25,7 +25,7 @@ class Event:
 
     REPRESENTATION = ('Event', '<:Event:1302570929024536626>')
     HEADER_FORMAT = '# {emoji} {name}'
-    EVENT_INFO_FORMAT = START_EMOJI + ' <t:{start}:F>\n' \
+    EVENT_INFO_FORMAT = '<@&1199389339281539183>\n' + START_EMOJI + ' <t:{start}:F>\n' \
         + ORGANISER_EMOJI + ' <@{organiser}>'
     DURATION_FORMAT = DURATION_EMOJI + ' {duration} minutes'
     EVENT_FORMAT = '\n\n{description}\n\n' + PEOPLE_EMOJI + \
