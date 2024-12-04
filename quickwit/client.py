@@ -24,6 +24,7 @@ async def load_extensions():
     await quickwit.add_cog(cogs.Timezone(quickwit))
     await quickwit.add_cog(cogs.Registration(quickwit))
     await quickwit.add_cog(cogs.Reminder(quickwit))
+    await quickwit.add_cog(cogs.Announce(quickwit))
     try:
         synced = await quickwit.tree.sync()
         logger.info(f"Synced {len(synced)} commands")

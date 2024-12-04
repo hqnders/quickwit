@@ -77,18 +77,21 @@ class CRUD(commands.Cog):
         discord.app_commands.Choice(
             name=events.FashionShow.REPRESENTATION[0], value=events.FashionShow.REPRESENTATION[0]),
         discord.app_commands.Choice(name=events.CampfireEvent.REPRESENTATION[0], value=events.CampfireEvent.REPRESENTATION[0])])
-    @discord.app_commands.describe(name='The name of the event',
-                                   description='The description of the event',
-                                   start='The start of the event (DD-MM[-YYYY] HH:MM)',
-                                   duration='The duration of the event in minutes',
-                                   event_type='The type of event',
-                                   image='The cover image of the event',
-                                   reminder='Amount of minutes before start to send out a reminder at')
     async def create(self, interaction: discord.Interaction, name: str, description:
                      str, start: str, duration: int = DEFAULT_EVENT_DURATION_MINUTES,
                      event_type: discord.app_commands.Choice[str] = None,
                      image: discord.Attachment = None, reminder: int = DEFAULT_REMINDER_MINUTES):
-        """Creates an event, see command description for further instruction"""
+        """Creates an event, see command description for further instruction
+        
+        Args:
+            name (str): The name of the event
+            description (str): The description of the event
+            start (str): The start of the event (DD-MM[-YYYY] HH:MM)
+            duration (int): The duration of the event in minutes
+            event_type (discord.app_commands.Choice[str]): The type of event
+            image (discord.Attachment): The cover image of the event
+            reminder (int): Amount of minutes before start to send out a reminder at
+        """
         # Get necessary cogs and validate input
         storage_cog = self.bot.get_cog('Storage')  # type: storage.Storage
         if await self._inputs_valid(interaction, name, start, duration, image, reminder) is False:
@@ -123,7 +126,9 @@ class CRUD(commands.Cog):
         location = f"<#{event_channel.id}>"
         scheduled_event = await interaction.guild.create_scheduled_event(
             name=name, start_time=utc_start, end_time=end_time,
-            description=description, privacy_level=discord.PrivacyLevel.guild_only, location=location, image=scheduled_event_file.fp.read(), reason='Associated with an event'
+            description=description, privacy_level=discord.PrivacyLevel.guild_only,
+            location=location, image=scheduled_event_file.fp.read(), reason='Associated with an event',
+            entity_type=discord.EntityType.external
         )
 
         # Fetch the right event class

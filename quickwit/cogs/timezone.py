@@ -17,13 +17,33 @@ class Timezone(commands.Cog):
         """Sets a user's timezone
 
         Args:
-            interaction (discord.Interaction): _description_
-            timezone (str): _description_
+            interaction (discord.Interaction): The Discord interaction relating to the command call
+            timezone (str): The timezone to apply, e.g. \'Europe/Amsterdam\'
         """
         storage_cog = self.bot.get_cog('Storage')  # type: storage.Storage
         if timezone not in pytz.all_timezones:
             await interaction.response.send_message(content='Invalid timezone! Please use a valid timezone (e.g., \'America/New_York\')', ephemeral=True)
             return
         storage_cog.set_timezone(interaction.user.id, timezone)
-        getLogger(__name__).info(f'User {interaction.user.id} set timezone to {timezone}')
+        getLogger(__name__).info(
+            f'User {interaction.user.id} set timezone to {timezone}')
         await interaction.response.send_message(content=f'Your timezone has been set to {timezone}', ephemeral=True)
+
+    @discord.app_commands.command()
+    async def list_timezones(self, interaction: discord.Interaction, country_code: str):
+        """Returns a list of all supported timezones
+
+        Args:
+            country_code: ISO 3166 country code (e.g. nl, de, fr, en)
+        """
+        country_code = country_code.upper()
+        if country_code not in pytz.country_timezones.keys():
+            await interaction.response.send_message(content='Invalid country code, please use a ISO 3166 country code', ephemeral=True)
+            return
+
+        await interaction.response.send_message(content='The following timezones are supported for your country:', ephemeral=True)
+        message = ''
+        for timezone in pytz.country_timezones[country_code]:
+            message += f"{timezone}\n"
+            if len(message) > 1800 or timezone == pytz.country_timezones[country_code][-1]:
+                await interaction.followup.send(content=message, ephemeral=True)

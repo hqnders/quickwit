@@ -5,8 +5,10 @@ FROM python:3.12-slim
 WORKDIR /app
 
 # Copy requirements file to install dependencies
-COPY requirements.txt resources quickwit .
-VOLUME data
+COPY requirements.txt .
+COPY resources resources
+COPY quickwit quickwit
+VOLUME /app/data
 
 # Install dependencies
 RUN pip install --no-cache-dir -r requirements.txt
