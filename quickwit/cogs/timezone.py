@@ -41,9 +41,8 @@ class Timezone(commands.Cog):
             await interaction.response.send_message(content='Invalid country code, please use a ISO 3166 country code', ephemeral=True)
             return
 
-        await interaction.response.send_message(content='The following timezones are supported for your country:', ephemeral=True)
         message = ''
         for timezone in pytz.country_timezones[country_code]:
             message += f"{timezone}\n"
-            if len(message) > 1800 or timezone == pytz.country_timezones[country_code][-1]:
-                await interaction.followup.send(content=message, ephemeral=True)
+
+        await interaction.response.send_message(content=f'The following timezones are supported for your country:\n{message}', ephemeral=True)
