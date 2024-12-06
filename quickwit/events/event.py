@@ -32,7 +32,8 @@ class Event:
         ' {sure_attendees} - {potential_attendees} Attendees:\n'
     ATTENDEE_FORMAT = "{status} <@{user_id}>\n"
 
-    def __init__(self, name: str, description: str, start: datetime, organiser_id: int, duration: int = DEFAULT_DURATION_MINUTES):
+    def __init__(self, name: str, description: str, start: datetime,
+                 organiser_id: int, duration: int = DEFAULT_DURATION_MINUTES):
         self.name = name
         self.description = description
         self.start = start
@@ -64,23 +65,27 @@ class Event:
         start = int(self.start.timestamp())
         message = self.EVENT_INFO_FORMAT.format(
             start=start, organiser=self.organiser_id)
-        if (self.duration != DEFAULT_DURATION_MINUTES):
+        if self.duration != DEFAULT_DURATION_MINUTES:
             message += '\t' + \
                 self.DURATION_FORMAT.format(duration=self.duration)
-        message += self.EVENT_FORMAT.format(description=self.description,
-                                            sure_attendees=_guaranteed_attendees, potential_attendees=_maximum_attendees)
+        message += self.EVENT_FORMAT.format(
+            description=self.description,
+            sure_attendees=_guaranteed_attendees, potential_attendees=_maximum_attendees)
         message = self._append_registrations(message, split_registrations)
         return message
 
     def _split_registrations_by_status(self) -> dict[Registration.Status, dict[int, Registration]]:
-        split_registrations = {}  # type: dict[Event.Registration.Status, dict[int, Event.Registration]] # noqa
+        split_registrations = dict[Event.Registration.Status,
+                                   dict[int, Event.Registration]]()
         for status in Event.Registration.Status:
             split_registrations[status] = {}
         for user_id, registration in self.registrations.items():
             split_registrations[registration.status][user_id] = registration
         return split_registrations
 
-    def _append_registrations(self, message: str, split_registrations: dict[Registration.Status, dict[int, Registration]]) -> str:
+    def _append_registrations(
+            self, message: str,
+            split_registrations: dict[Registration.Status, dict[int, Registration]]) -> str:
         for status in split_registrations:
             for user_id, registration in split_registrations[status].items():
                 message += self.ATTENDEE_FORMAT.format(

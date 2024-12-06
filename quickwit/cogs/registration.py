@@ -11,7 +11,8 @@ import quickwit.cogs.storage as storage
 class EventView(discord.ui.View):
     """UI View for event registation"""
 
-    def __init__(self, registration_type: events.Event.Registration = events.Event.Registration, custom_id_prefix: str = 'Event'):
+    def __init__(self, registration_type: events.Event.Registration = events.Event.Registration,
+                 custom_id_prefix: str = 'Event'):
         super().__init__(timeout=None)
         self.registration_type = registration_type
         self.registration_data = {}  # type: dict[int, events.Event.Registration] # noqa
@@ -28,18 +29,24 @@ class EventView(discord.ui.View):
                              style=discord.ButtonStyle.success, row=4)
 
         async def callback(self, interaction: discord.Interaction):
-            registration_data = self.view.registration_data.get(interaction.user.id, None)  # type: events.Event.Registration # noqa
+            registration_data: events.Event.Registration = \
+                self.view.registration_data.get(interaction.user.id, None)
             if registration_data is None:
-                await interaction.response.send_message("Please fill out your registration informaion", ephemeral=True)
+                await interaction.response.send_message(
+                    content="Please fill out your registration informaion",
+                    ephemeral=True)
                 return
 
             for field in fields(registration_data):
                 if getattr(registration_data, field.name) is None:
-                    await interaction.response.send_message(f"Could not find value for {field.name}, please resubmit registration", ephemeral=True)
+                    await interaction.response.send_message(
+                        content=f"Could not find value for {field.name}, \
+                            please resubmit registration",
+                        ephemeral=True)
                     return
 
-            interaction.client.dispatch(
-                'register', interaction.channel_id, interaction.user.id, self.view.registration_data[interaction.user.id])
+            interaction.client.dispatch('register', interaction.channel_id, interaction.user.id,
+                                        self.view.registration_data[interaction.user.id])
             self.view.registration_data.pop(interaction.user.id)
             await interaction.response.defer()
 
@@ -59,15 +66,18 @@ class EventView(discord.ui.View):
         """Selection field for registration status"""
 
         def __init__(self, custom_id:  str):
-            super().__init__(placeholder='Attendance status...', custom_id=custom_id, min_values=1, max_values=1, options=[discord.SelectOption(
-                emoji=status.value[1], label=status.value[0], value=status.value[0]) for status in events.Event.Registration.Status])
+            super().__init__(
+                placeholder='Attendance status...', custom_id=custom_id, min_values=1,
+                max_values=1, options=[discord.SelectOption(
+                    emoji=status.value[1], label=status.value[0], value=status.value[0])
+                    for status in events.Event.Registration.Status])
 
         async def callback(self, interaction: discord.Interaction):
             for status in events.Event.Registration.Status:
                 if status.value[0] == self.values[0]:
                     if self.view.registration_data.get(interaction.user.id, None) is None:
-                        self.view.registration_data[interaction.user.id] = self.view.registration_type(
-                            status=status)
+                        self.view.registration_data[interaction.user.id] = \
+                            self.view.registration_type(status=status)
                     else:
                         self.view.registration_data[interaction.user.id].status = status
                     break
@@ -86,17 +96,21 @@ class JobEventView(EventView):
         """Selection field for jobs"""
 
         def __init__(self, job_type: events.JobEvent.Registration.Job, custom_id: str):
-            super().__init__(placeholder="Select your job...",
-                             min_values=1, max_values=1, custom_id=custom_id, options=[discord.SelectOption(
-                                 emoji=job.value[1], label=job.value[0], value=job.value[0]) for job in job_type])
+            super().__init__(
+                placeholder="Select your job...",
+                min_values=1, max_values=1, custom_id=custom_id,
+                options=[discord.SelectOption(
+                    emoji=job.value[1], label=job.value[0], value=job.value[0])
+                    for job
+                    in job_type])
             self.job_type = job_type
 
         async def callback(self, interaction: discord.Interaction):
             for job in self.job_type:
                 if job.value[0] == self.values[0]:
                     if self.view.registration_data.get(interaction.user.id, None) is None:
-                        self.view.registration_data[interaction.user.id] = self.view.registration_type(
-                            job=job)
+                        self.view.registration_data[interaction.user.id] = \
+                            self.view.registration_type(job=job)
                     else:
                         self.view.registration_data[interaction.user.id].job = job
                     break
@@ -111,11 +125,14 @@ class Registration(commands.Cog):
 
         # Populate bot views with registration views
         self.bot.add_view(EventView())
-        for name, member in getmembers(events, lambda x: isclass(x) and issubclass(x, events.JobEvent) and x != events.JobEvent):
+        for name, member in getmembers(
+                events,
+                lambda x: isclass(x) and issubclass(x, events.JobEvent) and x != events.JobEvent):
             self.bot.add_view(JobEventView(member.Registration, name))
 
     @commands.Cog.listener()
-    async def on_register(self, channel_id: int, user_id: int, registration: events.Event.Registration):
+    async def on_register(self, channel_id: int, user_id: int,
+                          registration: events.Event.Registration):
         """Listens to register events thrown by UI components
 
         Args:
@@ -148,10 +165,13 @@ class Registration(commands.Cog):
                 'User %i tried to unregister for missing or broken event: %s', user_id, e)
 
     async def _refresh_message(self, channel_id: int, storage_cog: storage.Storage):
-        channel = await utils.grab_by_id(channel_id, self.bot.get_channel, self.bot.fetch_channel)  # type: discord.TextChannel # noqa
+        channel: discord.TextChannel = await utils.grab_by_id(channel_id, self.bot.get_channel,
+                                                              self.bot.fetch_channel)
         if channel is None:
             return None
-        message = [message async for message in channel.history(limit=2, oldest_first=True)][1]  # type: discord.Message # noqa
+        message: discord.Message = [message async
+                                    for message
+                                    in channel.history(limit=2, oldest_first=True)][1]
         event = storage_cog.get_event(channel_id)
         if event is not None:
             await message.edit(content=event.event.message())
@@ -181,7 +201,8 @@ class Registration(commands.Cog):
         await channel.send(f'{user.name} Registered through the Scheduled Event link')
 
     @commands.Cog.listener()
-    async def on_scheduled_event_user_remove(self, event: discord.ScheduledEvent, user: discord.User):
+    async def on_scheduled_event_user_remove(self, event: discord.ScheduledEvent,
+                                             user: discord.User):
         """Listens to a user leaving the scheduled event
 
         Args:

@@ -14,7 +14,9 @@ class JobEvent(event.Event):
 
     ATTENDEE_FORMAT = "{status} {job} <@{user_id}>\n"
 
-    def _append_registrations(self, message, split_registrations: dict[Registration.Status, dict[int, Registration]]):
+    def _append_registrations(
+            self, message,
+            split_registrations: dict[Registration.Status, dict[int, Registration]]):
         for registrations_for_status in split_registrations.values():
             for user_id, registration in registrations_for_status.items():
                 status = registration.status.value[1]

@@ -25,14 +25,14 @@ class Storage(commands.Cog):
         self._events_cache = {}  # type: dict[int, StoredEvent]
         self._user_timezone_cache = {}  # type: dict[int, str]
 
-    def set_timezone(self, user_id: int, timezone: str):
+    def set_timezone(self, user_id: int, user_timezone: str):
         """Sets the user timezone
 
         Args:
             user_id (int): The ID of the user
-            timezone (str): The timezone
+            user_timezone (str): The timezone
         """
-        self._user_timezone_cache[user_id] = timezone
+        self._user_timezone_cache[user_id] = user_timezone
 
     def get_timezone(self, user_id: int) -> str:
         """Gets a user timezone, returning UTC by default

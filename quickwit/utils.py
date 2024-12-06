@@ -1,3 +1,4 @@
+"""Contains utility methods used throughout the package"""
 from logging import getLogger
 from typing import Callable, TypeVar, Coroutine
 import discord
@@ -6,7 +7,8 @@ import discord
 T = TypeVar('T')
 
 
-async def grab_by_id(a_id: int, get_from_cache: Callable[[int], T], fetch_from_api: Coroutine[None, int, T]) -> T | None:
+async def grab_by_id(a_id: int, get_from_cache: Callable[[int], T],
+                     fetch_from_api: Coroutine[None, int, T]) -> T | None:
     """Grabs a Discord resource by ID. First from cache, then from API calls
 
     Args:

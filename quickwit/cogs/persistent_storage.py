@@ -132,7 +132,8 @@ class PersistentStorage(storage.Storage, name='Storage'):
                 event.registrations[row[0]] = event_class.Registration(
                     status=row[1], job=row[2])
             else:
-                # TODO: Give warning if assuming default registration when it may not be an Event but a new type
+                getLogger(__name__).warning(
+                    'Assuming default registrationg type after unable to find registration type for %s', event_class.__name__)
                 event.registrations[row[0]] = event_class.Registration(
                     status=row[1])
 

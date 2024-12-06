@@ -19,7 +19,9 @@ class QuickWit(commands.Bot):
         logger.setLevel(logging.INFO)
         handler = logging.StreamHandler()
         formatter = logging.Formatter(
-            '\x1b[30;1m%(asctime)s\x1b[0m %(levelname)-8s\x1b[0m \x1b[35m%(name)s\x1b[0m %(message)s', '%Y-%m-%d %H:%M:%S')
+            '\x1b[30;1m%(asctime)s\x1b[0m %(levelname)-8s\x1b\
+                [0m \x1b[35m%(name)s\x1b[0m %(message)s',
+            '%Y-%m-%d %H:%M:%S')
         handler.setFormatter(formatter)
         logger.addHandler(handler)
 
@@ -36,7 +38,8 @@ class QuickWit(commands.Bot):
             return
 
         admin = await utils.grab_by_id(self._admin_user_id, self.get_user, self.fetch_user)
-        await admin.send(content=f'An error occured during execution of {event_method}:\n{sys.exception()}')
+        await admin.send(
+            content=f'An error occured during execution of {event_method}:\n{sys.exception()}')
 
     async def _load_extensions(self):
         """Loads all relevant extensions"""
@@ -49,5 +52,9 @@ class QuickWit(commands.Bot):
         try:
             synced = await self.tree.sync()
             logging.getLogger(__name__).info("Synced %i commands", len(synced))
-        except (discord.HTTPException, discord.app_commands.CommandSyncFailure, discord.Forbidden, discord.app_commands.MissingApplicationID, discord.app_commands.TranslationError) as e:
+        except (discord.HTTPException,
+                discord.app_commands.CommandSyncFailure,
+                discord.Forbidden,
+                discord.app_commands.MissingApplicationID,
+                discord.app_commands.TranslationError) as e:
             logging.getLogger(__name__).info("Failed to sync commands: %s", e)

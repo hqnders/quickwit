@@ -46,7 +46,9 @@ class CRUD(commands.Cog):
             except ValueError:
                 pass
             if not valid:
-                await interaction.response.send_message(content='Invalid time format, use (DD-MM[-YYYY] HH:MM)', ephemeral=True)
+                await interaction.response.send_message(
+                    content='Invalid time format, use (DD-MM[-YYYY] HH:MM)',
+                    ephemeral=True)
                 return False
 
         if duration is not None and (duration > MAX_EVENT_DURATION_MINUTES or duration < 1):
@@ -71,12 +73,17 @@ class CRUD(commands.Cog):
     @discord.app_commands.command(description="Create an event")
     @discord.app_commands.choices(event_type=[
         discord.app_commands.Choice(
-            name=events.Event.REPRESENTATION[0], value=events.Event.REPRESENTATION[0]),
+            name=events.Event.REPRESENTATION[0],
+            value=events.Event.REPRESENTATION[0]),
         discord.app_commands.Choice(
-            name=events.FF14Event.REPRESENTATION[0], value=events.FF14Event.REPRESENTATION[0]),
+            name=events.FF14Event.REPRESENTATION[0],
+            value=events.FF14Event.REPRESENTATION[0]),
         discord.app_commands.Choice(
-            name=events.FashionShow.REPRESENTATION[0], value=events.FashionShow.REPRESENTATION[0]),
-        discord.app_commands.Choice(name=events.CampfireEvent.REPRESENTATION[0], value=events.CampfireEvent.REPRESENTATION[0])])
+            name=events.FashionShow.REPRESENTATION[0],
+            value=events.FashionShow.REPRESENTATION[0]),
+        discord.app_commands.Choice(
+            name=events.CampfireEvent.REPRESENTATION[0],
+            value=events.CampfireEvent.REPRESENTATION[0])])
     async def create(self, interaction: discord.Interaction, name: str, description:
                      str, start: str, duration: int = DEFAULT_EVENT_DURATION_MINUTES,
                      event_type: discord.app_commands.Choice[str] = None,
@@ -125,16 +132,18 @@ class CRUD(commands.Cog):
         end_time = utc_start + timedelta(minutes=duration)
         location = f"<#{event_channel.id}>"
         scheduled_event = await interaction.guild.create_scheduled_event(
-            name=name, start_time=utc_start, end_time=end_time,
-            description=description, privacy_level=discord.PrivacyLevel.guild_only,
-            location=location, image=scheduled_event_file.fp.read(), reason='Associated with an event',
+            name=name, start_time=utc_start, end_time=end_time, description=description,
+            privacy_level=discord.PrivacyLevel.guild_only, location=location,
+            image=scheduled_event_file.fp.read(), reason='Associated with an event',
             entity_type=discord.EntityType.external
         )
 
         # Fetch the right event class
         event_class = DefaultEventClass
         if event_type is not None:
-            for _, _event_class in getmembers(events, lambda x: isclass(x) and issubclass(x, events.Event)):
+            for _, _event_class in getmembers(
+                    events,
+                    lambda x: isclass(x) and issubclass(x, events.Event)):
                 if _event_class.REPRESENTATION[0] == event_type.value:
                     event_class = _event_class
                     break
@@ -149,8 +158,10 @@ class CRUD(commands.Cog):
                 break
 
         # Create and store the event
-        event = event_class(name=scheduled_event.name, description=scheduled_event.description,
-                            start=scheduled_event.start_time, duration=duration, organiser_id=interaction.user.id)  # type: events.Event # noqa
+        event: events.Event = event_class(name=scheduled_event.name,
+                                          description=scheduled_event.description,
+                                          start=scheduled_event.start_time, duration=duration,
+                                          organiser_id=interaction.user.id)
         reminder_time = utc_start - timedelta(minutes=reminder)
         storage_cog.store_event(storage.StoredEvent(
             event, event_channel.id, scheduled_event.id, interaction.guild_id, reminder_time))
@@ -166,8 +177,12 @@ class CRUD(commands.Cog):
     async def edit(self, interaction: discord.Interaction, name: str = None,
                    start: str = None, description: str = None,
                    duration: int = None, image: discord.Attachment = None, reminder: int = None):
-        """Command for editing an existing event, see create command description for further details"""
-        # Get necessary cogs, fetch corresponding event, event message and scheduled event and validate input
+        """
+        Command for editing an existing event, 
+        see create command description for further details
+        """
+        # Get necessary cogs, fetch corresponding event, event message and scheduled event
+        # Validate input
         storage_cog = self.bot.get_cog('Storage')  # type: storage.Storage
         stored_event = storage_cog.get_event(interaction.channel_id)
         if stored_event is None:
@@ -176,15 +191,18 @@ class CRUD(commands.Cog):
             return
         event = stored_event.event
 
-        messages = [message async for message in interaction.channel.history(limit=2, oldest_first=True)]  # type: list[discord.Message] # noqa
+        messages: list[discord.Message] = \
+            [message async for message in interaction.channel.history(limit=2, oldest_first=True)]
         if len(messages) == 0:
             await interaction.response.send_message(
                 content='Could not locate event creation message in this channel.', ephemeral=True)
         header_message = messages[0]
         registration_message = messages[1]
 
-        scheduled_event = await utils.grab_by_id(
-            stored_event.scheduled_event_id, interaction.guild.get_scheduled_event, interaction.guild.fetch_scheduled_event)  # type: discord.ScheduledEvent # noqa
+        scheduled_event: discord.ScheduledEvent = await utils.grab_by_id(
+            stored_event.scheduled_event_id,
+            interaction.guild.get_scheduled_event,
+            interaction.guild.fetch_scheduled_event)
         if scheduled_event is None:
             await interaction.response.send_message(
                 content='Failed to fetch the associated scheduled event', ephemeral=True)
@@ -193,8 +211,10 @@ class CRUD(commands.Cog):
         if await self._inputs_valid(interaction, name, start, duration, image, reminder) is False:
             return
 
-        if (interaction.user.id != event.organiser_id):
-            await interaction.response.send_message(content='Only the event organiser may update this event')
+        if interaction.user.id != event.organiser_id:
+            await interaction.response.send_message(
+                content='Only the event organiser may update this event',
+                ephemeral=True)
             return
 
         await interaction.response.send_message(content="Event will be updated!", ephemeral=True)
@@ -230,7 +250,8 @@ class CRUD(commands.Cog):
         await scheduled_event.edit(name=event.name, description=event.description,
                                    channel=scheduled_event.channel, start_time=event.start,
                                    end_time=end_time, privacy_level=discord.PrivacyLevel.guild_only,
-                                   entity_type=scheduled_event.entity_type, status=scheduled_event.status, image=scheduled_event_image,
+                                   entity_type=scheduled_event.entity_type,
+                                   status=scheduled_event.status, image=scheduled_event_image,
                                    location=scheduled_event.location)
         await interaction.channel.edit(name=event.name)
         await header_message.edit(content=event.header_message())
@@ -271,7 +292,9 @@ class CRUD(commands.Cog):
         guild = await utils.grab_by_id(
             guild_id, self.bot.get_guild, self.bot.fetch_guild)  # type: discord.Guild
         if guild is not None:
-            scheduled_event = await utils.grab_by_id(
-                scheduled_event_id, guild.get_scheduled_event, guild.fetch_scheduled_event)  # type: discord.ScheduledEvent # noqa
+            scheduled_event: discord.ScheduledEvent = await utils.grab_by_id(
+                scheduled_event_id,
+                guild.get_scheduled_event,
+                guild.fetch_scheduled_event)
             if scheduled_event is not None:
                 await scheduled_event.delete('Event has ended')

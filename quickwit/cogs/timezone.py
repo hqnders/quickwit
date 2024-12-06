@@ -22,12 +22,16 @@ class Timezone(commands.Cog):
         """
         storage_cog = self.bot.get_cog('Storage')  # type: storage.Storage
         if timezone not in pytz.all_timezones:
-            await interaction.response.send_message(content='Invalid timezone! Please use a valid timezone (e.g., \'America/New_York\')', ephemeral=True)
+            await interaction.response.send_message(
+                content='Invalid timezone! Please use a valid timezone \
+                      (e.g., \'America/New_York\')',
+                ephemeral=True)
             return
         storage_cog.set_timezone(interaction.user.id, timezone)
         getLogger(__name__).info(
             'User %i set timezone to %s', interaction.user.id, timezone)
-        await interaction.response.send_message(content=f'Your timezone has been set to {timezone}', ephemeral=True)
+        await interaction.response.send_message(content=f'Your timezone has been set to {timezone}',
+                                                ephemeral=True)
 
     @discord.app_commands.command()
     async def list_timezones(self, interaction: discord.Interaction, country_code: str):
@@ -38,11 +42,15 @@ class Timezone(commands.Cog):
         """
         country_code = country_code.upper()
         if country_code not in pytz.country_timezones.keys():
-            await interaction.response.send_message(content='Invalid country code, please use a ISO 3166 country code', ephemeral=True)
+            await interaction.response.send_message(
+                content='Invalid country code, please use a ISO 3166 country code', ephemeral=True)
             return
 
         message = ''
         for timezone in pytz.country_timezones[country_code]:
             message += f"{timezone}\n"
 
-        await interaction.response.send_message(content=f'The following timezones are supported for your country:\n{message}', ephemeral=True)
+        await interaction.response.send_message(
+            content=f'The following timezones are supported for your country:\n{
+                message}',
+            ephemeral=True)
