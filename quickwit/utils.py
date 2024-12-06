@@ -21,10 +21,10 @@ async def grab_by_id(a_id: int, get_from_cache: Callable[[int], T], fetch_from_a
     if result is None:
         try:
             getLogger(__name__).info(
-                f'Using {fetch_from_api.__name__} to fetch resource with ID: {a_id}')
+                'Using %s to fetch resource with ID: %s', fetch_from_api.__name__, a_id)
             result = await fetch_from_api(a_id)
         except (discord.NotFound, discord.HTTPException) as e:
             getLogger(__name__).error(
-                f'Encountered error while fetching channel: {e}')
+                'Encountered error while fetching channel: %s', e)
             return None
     return result

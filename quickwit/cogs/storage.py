@@ -54,7 +54,8 @@ class Storage(commands.Cog):
             registration (Event.Registration): The registration information
         """
         if self._events_cache.get(channel_id, None) is None:
-            getLogger(__name__).warning(f'User {user_id} is trying to register for an uncached event in channel {channel_id}')
+            getLogger(__name__).warning(
+                'User %i is trying to register for an uncached event in channel %i', user_id, channel_id)
             return
         self._events_cache[channel_id].event.registrations[user_id] = registration
 
@@ -66,7 +67,8 @@ class Storage(commands.Cog):
             user_id (int): The ID of the user
         """
         if self._events_cache.get(channel_id, None) is None:
-            getLogger(__name__).warning(f'User {user_id} is trying to unregister for an uncached event in channel {channel_id}')
+            getLogger(__name__).warning(
+                'User %i is trying to unregister for an uncached event in channel %i', user_id, channel_id)
             return
         self._events_cache[channel_id].event.registrations.pop(
             user_id, None)

@@ -36,5 +36,5 @@ class Reminder(commands.Cog):
                     message += f'<@{user_id}>'
             await channel.send(message)
             getLogger(__name__).info(
-                f'Sent reminder for event {stored_event.event.name}')
+                'Sent reminder for event %s', stored_event.event.name)
             self.already_reminded.append(stored_event.channel_id)

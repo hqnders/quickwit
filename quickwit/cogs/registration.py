@@ -129,7 +129,7 @@ class Registration(commands.Cog):
             await self._refresh_message(channel_id, storage_cog)
         except ValueError as e:
             getLogger(__name__).error(
-                f'User tried to register for missing or broken event: {e}')
+                'User tried to register for missing or broken event: %s', e)
 
     @commands.Cog.listener()
     async def on_unregister(self, channel_id: int, user_id: int):
@@ -145,7 +145,7 @@ class Registration(commands.Cog):
             await self._refresh_message(channel_id, storage_cog)
         except ValueError as e:
             getLogger(__name__).error(
-                f'User {user_id} tried to unregister for missing or broken event: {e}')
+                'User %i tried to unregister for missing or broken event: %s', user_id, e)
 
     async def _refresh_message(self, channel_id: int, storage_cog: storage.Storage):
         channel = await utils.grab_by_id(channel_id, self.bot.get_channel, self.bot.fetch_channel)  # type: discord.TextChannel # noqa

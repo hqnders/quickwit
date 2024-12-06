@@ -82,7 +82,7 @@ class CRUD(commands.Cog):
                      event_type: discord.app_commands.Choice[str] = None,
                      image: discord.Attachment = None, reminder: int = DEFAULT_REMINDER_MINUTES):
         """Creates an event, see command description for further instruction
-        
+
         Args:
             name (str): The name of the event
             description (str): The description of the event
@@ -159,7 +159,8 @@ class CRUD(commands.Cog):
         header_message = await event_channel.send(content=event.header_message(), file=file)
         await event_channel.send(content=event.message(), view=event_view)
         await header_message.pin()
-        getLogger(__name__).info(f'Created event \"{event.name}\" (channel {event_channel.id}, scheduled {scheduled_event.id})')  # noqa
+        getLogger(__name__).info('Created event \"%s\" (channel %i, scheduled %i)',
+                                 event.name, event_channel.id, scheduled_event.id)
 
     @discord.app_commands.command(description='Edit this channel\'s event')
     async def edit(self, interaction: discord.Interaction, name: str = None,
@@ -234,7 +235,7 @@ class CRUD(commands.Cog):
         await interaction.channel.edit(name=event.name)
         await header_message.edit(content=event.header_message())
         await registration_message.edit(content=event.message())
-        getLogger(__name__).info(f'{interaction.user.id} edited event {event.name}')  # noqa
+        getLogger(__name__).info('%i edited event %s', interaction.user.id, event.name)  # noqa
 
     @tasks.loop(time=time(0, 0, 0))
     async def prune_events(self):

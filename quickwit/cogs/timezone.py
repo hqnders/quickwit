@@ -26,7 +26,7 @@ class Timezone(commands.Cog):
             return
         storage_cog.set_timezone(interaction.user.id, timezone)
         getLogger(__name__).info(
-            f'User {interaction.user.id} set timezone to {timezone}')
+            'User %i set timezone to %s', interaction.user.id, timezone)
         await interaction.response.send_message(content=f'Your timezone has been set to {timezone}', ephemeral=True)
 
     @discord.app_commands.command()

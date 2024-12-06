@@ -102,7 +102,7 @@ class PersistentStorage(storage.Storage, name='Storage'):
             'SELECT event_type, name, description, scheduled_event_id, organiser_id, utc_start, utc_end, guild_id, reminder FROM Events WHERE channel_id=?', [channel_id]).fetchone()
         if result is None:
             getLogger(__name__).error(
-                f'Could not get event {channel_id} from database')
+                'Could not get event %i from database', channel_id)
             return None
         event_type = result[0]
         name = result[1]
