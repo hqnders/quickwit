@@ -178,7 +178,7 @@ class Registration(commands.Cog):
                 break
         await self.on_register(channel_id, user.id, registration)
         channel = await utils.grab_by_id(channel_id, self.bot.get_channel, self.bot.fetch_channel)
-        await channel.send(f'{user.display_name} Registered through the Scheduled Event link')
+        await channel.send(f'{user.name} Registered through the Scheduled Event link')
 
     @commands.Cog.listener()
     async def on_scheduled_event_user_remove(self, event: discord.ScheduledEvent, user: discord.User):
@@ -195,4 +195,4 @@ class Registration(commands.Cog):
             return
         await self.on_unregister(channel_id, user.id)
         channel = await utils.grab_by_id(channel_id, self.bot.get_channel, self.bot.fetch_channel)
-        await channel.send(f'{user.display_name} Unregistered through the Scheduled Event link')
+        await channel.send(f'{user.name} Unregistered through the Scheduled Event link')
