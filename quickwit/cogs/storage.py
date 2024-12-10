@@ -1,20 +1,32 @@
 """Cog to manage persistent storage"""
 from dataclasses import dataclass
 from logging import getLogger
-from datetime import timedelta, datetime
+from datetime import datetime
 from discord import File
 from discord.ext import commands
-from quickwit.events import Event
 
 
 @dataclass
-class StoredEvent:
+class Event:
     """Represents an Event saved in storage"""
-    event: Event
+    @dataclass
+    class Registration:
+        """Represents a registration saved in storage"""
+        user_id: int
+        status: str
+        job: str = None
+
     channel_id: int
+    event_type: str
+    name: str
+    description: str
     scheduled_event_id: int
+    organiser_id: int
+    utc_start: datetime
+    utc_end: datetime
     guild_id: int
     reminder: datetime
+    registrations = list[Registration]()
 
 
 class Storage(commands.Cog):
@@ -22,63 +34,52 @@ class Storage(commands.Cog):
 
     def __init__(self, bot: commands.Bot):
         self.bot = bot
-        self._events_cache = {}  # type: dict[int, StoredEvent]
-        self._user_timezone_cache = {}  # type: dict[int, str]
+        self._events_cache = dict[int, Event]()
+        self._user_timezone_cache = dict[int, str]()
+        self._registration_data = dict[int, dict[tuple[str, str]]]
 
     def set_timezone(self, user_id: int, user_timezone: str):
-        """Sets the user timezone
-
-        Args:
-            user_id (int): The ID of the user
-            user_timezone (str): The timezone
-        """
+        """Sets the user timezone"""
         self._user_timezone_cache[user_id] = user_timezone
 
     def get_timezone(self, user_id: int) -> str:
-        """Gets a user timezone, returning UTC by default
-
-        Args:
-            user_id (int): The ID of the user
+        """Gets a user timezone
 
         Returns:
             str: The timezone, UTC by default
         """
         return self._user_timezone_cache.get(user_id, 'UTC')
 
-    def register_user(self, channel_id: int, user_id: int, registration: Event.Registration):
+    def register_user(self, channel_id: int, registration: Event.Registration):
         """Registers a user for an event
 
         Args:
             channel_id (int): The channel ID of the event
-            user_id (int): The user registering for the event
-            registration (Event.Registration): The registration information
         """
-        if self._events_cache.get(channel_id, None) is None:
+        event = self._events_cache.get(channel_id, None)
+        if event is None:
             getLogger(__name__).warning(
-                'User %i is trying to register for an uncached event in channel %i', user_id, channel_id)
+                'User %i is trying to register for an uncached event in channel %i',
+                registration.user_id, channel_id)
             return
-        self._events_cache[channel_id].event.registrations[user_id] = registration
+        event.registrations[registration.user_id] = registration
 
     def unregister_user(self, channel_id: int, user_id: int):
         """Unregister a user for an event
 
         Args:
             channel_id (int): The channel ID of the event
-            user_id (int): The ID of the user
         """
-        if self._events_cache.get(channel_id, None) is None:
+        event = self._events_cache.get(channel_id, None)
+        if event is None:
             getLogger(__name__).warning(
-                'User %i is trying to unregister for an uncached event in channel %i', user_id, channel_id)
+                'User %i is trying to unregister for an uncached event in channel %i',
+                user_id, channel_id)
             return
-        self._events_cache[channel_id].event.registrations.pop(
-            user_id, None)
+        event.registrations.pop(user_id, None)
 
-    def store_event(self, stored_event: StoredEvent):
-        """Stores an event, also used to overwrite an existing event
-
-        Args:
-            stored_event (StoredEvent): The event to store
-        """
+    def store_event(self, stored_event: Event):
+        """Stores an event, also used to overwrite an existing event"""
         self._events_cache[stored_event.channel_id] = stored_event
 
     def delete_event(self, channel_id: int):
@@ -89,14 +90,11 @@ class Storage(commands.Cog):
         """
         self._events_cache.pop(channel_id, None)
 
-    def get_event(self, channel_id: int) -> StoredEvent | None:
+    def get_event(self, channel_id: int) -> Event | None:
         """Fetch an event based on channel ID
 
-        Args:
-            channel_id (int): The ID of the event associated channel
-
         Returns:
-            StoredEvent: The event and all it's storage information
+            Event: The event and all it's storage information or None
         """
         return self._events_cache.get(channel_id, None)
 
@@ -108,19 +106,10 @@ class Storage(commands.Cog):
         """
         return File('resources/img/default.png')
 
-    def get_past_events(self) -> list[StoredEvent]:
-        """Fetch the channel ID's of ended events
-
-        Returns:
-            list[tuple[int, int, int]]: A list of channel ID's, scheduled event ID's and guild ID's of events that have ended
-        """
-        channel_ids_of_past_events = []
-        for channel_id in list(self._events_cache.keys()):
-            event = self._events_cache[channel_id]
-            event_end = event.event.start + timedelta(event.event.duration)
-            if event_end < datetime.now():
-                channel_ids_of_past_events.append(event)
-        return channel_ids_of_past_events
+    def get_past_events(self) -> list[Event]:
+        """Fetch the channel ID's of ended events"""
+        now = datetime.now()
+        return [event.channel_id for event in self._events_cache.values() if event.utc_end < now]
 
     def get_active_reminders(self) -> list[int]:
         """Get all channels for which a reminder can be sent
@@ -129,7 +118,13 @@ class Storage(commands.Cog):
             list[int]: The list of channel ID's for which event you may send a reminder
         """
         now = datetime.now()
-        active_reminders = []
-        for stored_event in self._events_cache.values():
-            if stored_event.event.start < now and stored_event.reminder > now:
-                active_reminders.append(stored_event.channel_id)
+        return [event.channel_id for event in self._events_cache.values()
+                if event.utc_start < now and event.reminder > now]
+
+    @commands.Cog.listener()
+    async def on_job_selected(self, channel_id: int, user_id: int, job: str):
+        registration_data = self._registration_data.get(channel_id, {}).get(user_id, (None, None))
+
+    @commands.Cog.listener()
+    async def on_user_selected_status(self, channel_id: int, user_id: int, status: str):
+        pass

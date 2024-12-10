@@ -10,7 +10,9 @@ class QuickWit(commands.Bot):
     """Wrapper around a commands.Bot to provide QuickWit functionalities"""
 
     def __init__(self, admin_user_id: int):
-        super().__init__(command_prefix='/', intents=discord.Intents.all)
+        intents = discord.Intents.default()
+        intents.members = True
+        super().__init__(command_prefix='/', intents=intents)
 
         self._admin_user_id = admin_user_id
 
@@ -25,30 +27,29 @@ class QuickWit(commands.Bot):
         handler.setFormatter(formatter)
         logger.addHandler(handler)
 
-    @commands.Bot.event
+    async def setup_hook(self):
+        self.add_listener(self.on_ready, 'on_ready')
+        self.add_listener(self.on_error, 'on_error')
+
     async def on_ready(self):
         """Called when quickwit is ready"""
         logging.getLogger(__name__).info("Logged in as %s", self.user)
         await self._load_extensions()
 
-    @commands.Bot.event
-    async def on_error(self, event_method: str, /, args, kwargs):
-        await super().on_error(event_method, args, kwargs)
-        if self._admin_user_id is None:
-            return
-
-        admin = await utils.grab_by_id(self._admin_user_id, self.get_user, self.fetch_user)
-        await admin.send(
+    async def on_error(self, event_method: str, /, *_, **__):
+        owner = await utils.grab_by_id(self.owner_id, self.get_user, self.fetch_user)
+        await owner.send(
             content=f'An error occured during execution of {event_method}:\n{sys.exception()}')
 
     async def _load_extensions(self):
         """Loads all relevant extensions"""
-        await self.add_cog(cogs.PersistentStorage(self))
+        await self.add_cog(cogs.Storage(self))
         await self.add_cog(cogs.CRUD(self))
         await self.add_cog(cogs.Timezone(self))
         await self.add_cog(cogs.Registration(self))
-        await self.add_cog(cogs.Reminder(self))
-        await self.add_cog(cogs.Announce(self))
+        # await self.add_cog(cogs.Reminder(self))
+        # await self.add_cog(cogs.Announce(self))
+        # await self.add_cog(cogs.Overview(self))
         try:
             synced = await self.tree.sync()
             logging.getLogger(__name__).info("Synced %i commands", len(synced))

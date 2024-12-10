@@ -2,10 +2,8 @@
 import sqlite3
 import os
 from logging import getLogger
-from datetime import datetime, timedelta, timezone
-from inspect import getmembers, isclass
+from datetime import datetime, timezone
 from discord.ext import commands
-from quickwit import events
 import quickwit.cogs.storage as storage
 
 
@@ -49,17 +47,12 @@ class PersistentStorage(storage.Storage, name='Storage'):
         super().set_timezone(user_id, user_timezone)
         return user_timezone
 
-    def register_user(self, channel_id: int, user_id: int, registration: events.Event.Registration):
+    def register_user(self, channel_id: int, registration: storage.Event.Registration):
         self._ensure_cached_event(channel_id)
-        super().register_user(channel_id, user_id, registration)
-
-        # Fetch the user's job if we're registering for a jobevent
-        job = None
-        if isinstance(registration, events.JobEvent.Registration):
-            job = registration.job.value[0]
+        super().register_user(channel_id, registration)
 
         self._connection.execute(self._scripts[self._REGISTER_USER_SCRIPT_NAME],
-                                 [channel_id, user_id, job, registration.status.value[0]])
+                                 [channel_id, registration.user_id, registration.job, str(registration.status)])
         self._connection.commit()
 
     def unregister_user(self, channel_id: int, user_id: int):
@@ -69,18 +62,15 @@ class PersistentStorage(storage.Storage, name='Storage'):
             'DELETE FROM Registrations WHERE channel_id=? AND user_id=?', [channel_id, user_id])
         self._connection.commit()
 
-    def store_event(self, stored_event: storage.StoredEvent):
+    def store_event(self, stored_event: storage.Event):
         super().store_event(stored_event)
-        event = stored_event.event
-        event_type = type(event).__name__
-        start = round(event.start.timestamp())
-        end = round(
-            (event.start + timedelta(minutes=event.duration)).timestamp())
+        start = round(stored_event.utc_start.timestamp())
+        end = round(stored_event.utc_end.timestamp())
         reminder = round(stored_event.reminder.timestamp())
         self._connection.execute(self._scripts[self._STORE_EVENT_SCRIPT_NAME], [
-            stored_event.channel_id, event_type, event.name, event.description,
-            stored_event.scheduled_event_id, event.organiser_id, start,
-            end, stored_event.guild_id, reminder
+            stored_event.channel_id, stored_event.event_type, stored_event.name,
+            stored_event.description, stored_event.scheduled_event_id,
+            stored_event.organiser_id, start, end, stored_event.guild_id, reminder
         ])
         self._connection.commit()
 
@@ -90,8 +80,9 @@ class PersistentStorage(storage.Storage, name='Storage'):
             'DELETE FROM Events WHERE channel_id=?', [channel_id])
         self._connection.commit()
 
-    def get_event(self, channel_id: int) -> storage.StoredEvent | None:
-        """The channel corresponding to channel_id must be within the bot's channel cache to succeed"""
+    def get_event(self, channel_id: int) -> storage.Event | None:
+        """The channel corresponding to channel_id must be within 
+            the bot's channel cache to succeed"""
         # Attempt to get it from cache
         event = super().get_event(channel_id)
         if event is not None:
@@ -99,7 +90,9 @@ class PersistentStorage(storage.Storage, name='Storage'):
 
         # Attempt to get it from persistent storage
         result = self._connection.execute(
-            'SELECT event_type, name, description, scheduled_event_id, organiser_id, utc_start, utc_end, guild_id, reminder FROM Events WHERE channel_id=?', [channel_id]).fetchone()
+            'SELECT event_type, name, description, scheduled_event_id, organiser_id, utc_start, \
+                utc_end, guild_id, reminder FROM Events WHERE channel_id=?',
+            [channel_id]).fetchone()
         if result is None:
             getLogger(__name__).error(
                 'Could not get event %i from database', channel_id)
@@ -109,36 +102,24 @@ class PersistentStorage(storage.Storage, name='Storage'):
         description = result[2]
         scheduled_event_id = result[3]
         organiser_id = result[4]
-        start = datetime.fromtimestamp(result[5], timezone.utc)
-        duration = (datetime.fromtimestamp(
-            result[6], timezone.utc) - start).total_seconds() / 60
+        utc_start = datetime.fromtimestamp(result[5], timezone.utc)
+        utc_end = datetime.fromtimestamp(result[6], timezone.utc)
         guild_id = result[7]
         reminder = datetime.fromtimestamp(result[8], timezone.utc)
 
         # Create the event
-        event_class = events.Event
-        for event_class_name, _event_class in getmembers(events, lambda x: isclass(x) and issubclass(x, events.Event)):
-            if event_class_name == event_type:
-                event_class = _event_class
-                break
-        event = event_class(name=name, description=description,
-                            start=start, duration=duration, organiser_id=organiser_id)
+        stored_event = storage.Event(channel_id, event_type, name, description,
+                                     scheduled_event_id, organiser_id, utc_start,
+                                     utc_end, guild_id, reminder)
 
         # Fetch registrations
         result = self._connection.execute(
-            'SELECT user_id, status, job FROM Registrations WHERE channel_id=?', [channel_id]).fetchall()
+            'SELECT user_id, status, job FROM Registrations WHERE channel_id=?',
+            [channel_id]).fetchall()
         for row in result:
-            if issubclass(event_class, events.JobEvent):
-                event.registrations[row[0]] = event_class.Registration(
-                    status=row[1], job=row[2])
-            else:
-                getLogger(__name__).warning(
-                    'Assuming default registrationg type after unable to find registration type for %s', event_class.__name__)
-                event.registrations[row[0]] = event_class.Registration(
-                    status=row[1])
+            stored_event.registrations.append(
+                stored_event.Registration(row[0], row[1], row[2]))
 
-        stored_event = storage.StoredEvent(
-            event, channel_id, scheduled_event_id, guild_id, reminder)
         # Cache the event
         super().store_event(stored_event)
         return stored_event

@@ -7,14 +7,15 @@ import pytz
 from discord.ext import commands, tasks
 import quickwit.cogs.registration as registration
 import quickwit.cogs.storage as storage
-from quickwit import events, utils
+from quickwit import representations, utils
 
 MAX_EVENT_DURATION_MINUTES = 300
 DEFAULT_EVENT_DURATION_MINUTES = 60
 DEFAULT_REMINDER_MINUTES = 30
 MAX_EVENT_NAME_LENGTH = 25
 EVENT_CHANNEL_CATEGORY = 'events'
-DefaultEventClass = events.FF14Event
+EVENT_ROLE_NAME = 'Events'
+DefaultEventRepresentationClass = representations.FF14EventRepresentation
 
 
 class CRUD(commands.Cog):
@@ -73,17 +74,17 @@ class CRUD(commands.Cog):
     @discord.app_commands.command(description="Create an event")
     @discord.app_commands.choices(event_type=[
         discord.app_commands.Choice(
-            name=events.Event.REPRESENTATION[0],
-            value=events.Event.REPRESENTATION[0]),
+            name=representations.EventRepresentation.REPRESENTATION,
+            value=representations.EventRepresentation.REPRESENTATION),
         discord.app_commands.Choice(
-            name=events.FF14Event.REPRESENTATION[0],
-            value=events.FF14Event.REPRESENTATION[0]),
+            name=representations.FF14EventRepresentation.REPRESENTATION,
+            value=representations.FF14EventRepresentation.REPRESENTATION),
         discord.app_commands.Choice(
-            name=events.FashionShow.REPRESENTATION[0],
-            value=events.FashionShow.REPRESENTATION[0]),
+            name=representations.FashionShowRepresentation.REPRESENTATION,
+            value=representations.FashionShowRepresentation.REPRESENTATION),
         discord.app_commands.Choice(
-            name=events.CampfireEvent.REPRESENTATION[0],
-            value=events.CampfireEvent.REPRESENTATION[0])])
+            name=representations.CampfireEventRepresentation.REPRESENTATION,
+            value=representations.CampfireEventRepresentation.REPRESENTATION)])
     async def create(self, interaction: discord.Interaction, name: str, description:
                      str, start: str, duration: int = DEFAULT_EVENT_DURATION_MINUTES,
                      event_type: discord.app_commands.Choice[str] = None,
@@ -100,7 +101,7 @@ class CRUD(commands.Cog):
             reminder (int): Amount of minutes before start to send out a reminder at
         """
         # Get necessary cogs and validate input
-        storage_cog = self.bot.get_cog('Storage')  # type: storage.Storage
+        storage_cog: storage.Storage = self.bot.get_cog('Storage')
         if await self._inputs_valid(interaction, name, start, duration, image, reminder) is False:
             return
 
@@ -139,36 +140,46 @@ class CRUD(commands.Cog):
         )
 
         # Fetch the right event class
-        event_class = DefaultEventClass
+        event_representation_class = DefaultEventRepresentationClass
         if event_type is not None:
             for _, _event_class in getmembers(
-                    events,
-                    lambda x: isclass(x) and issubclass(x, events.Event)):
-                if _event_class.REPRESENTATION[0] == event_type.value:
-                    event_class = _event_class
+                    representations,
+                    lambda x: isclass(x) and issubclass(x, representations.EventRepresentation)):
+                if _event_class.REPRESENTATION == event_type.value:
+                    event_representation_class = _event_class
                     break
+
+        # Create and store the event
+        reminder_time = utc_start - timedelta(minutes=reminder)
+        utc_end = utc_start + timedelta(minutes=duration)
+        event = storage.Event(event_channel.id, event_representation_class.REPRESENTATION,
+                              name, description, scheduled_event.id, interaction.user.id,
+                              utc_start, utc_end, interaction.guild_id, reminder_time)
+        storage_cog.store_event(event)
+
+        # Get the event role of the server
+        event_role = interaction.guild.default_role
+        for role in interaction.guild.roles:
+            if role.name == EVENT_ROLE_NAME:
+                event_role = role
+
+        # Create the event representation
+        event_representation = event_representation_class(
+            event, self.bot.emojis, event_role)
 
         # Fetch the right view
         event_view = registration.EventView()
         relevant_views = [
             view for view in self.bot.persistent_views if isinstance(view, registration.EventView)]
         for view in relevant_views:
-            if view.registration_type == event_class.Registration:
+            if view.registration_type == event_representation_class.Registration:
                 event_view = view
                 break
 
-        # Create and store the event
-        event: events.Event = event_class(name=scheduled_event.name,
-                                          description=scheduled_event.description,
-                                          start=scheduled_event.start_time, duration=duration,
-                                          organiser_id=interaction.user.id)
-        reminder_time = utc_start - timedelta(minutes=reminder)
-        storage_cog.store_event(storage.StoredEvent(
-            event, event_channel.id, scheduled_event.id, interaction.guild_id, reminder_time))
-
         # Send the pinned event overview message with associated UI
-        header_message = await event_channel.send(content=event.header_message(), file=file)
-        await event_channel.send(content=event.message(), view=event_view)
+        header_message = await event_channel.send(content=event_representation.header_message(),
+                                                  file=file)
+        await event_channel.send(content=event_representation.body_message(), view=event_view)
         await header_message.pin()
         getLogger(__name__).info('Created event \"%s\" (channel %i, scheduled %i)',
                                  event.name, event_channel.id, scheduled_event.id)

@@ -1,7 +1,9 @@
 """Contains utility methods used throughout the package"""
 from logging import getLogger
-from typing import Callable, TypeVar, Coroutine
+from typing import Callable, TypeVar, Coroutine, Sequence
+from inspect import getmembers, isclass
 import discord
+from quickwit.representations import events
 
 
 T = TypeVar('T')
@@ -30,3 +32,19 @@ async def grab_by_id(a_id: int, get_from_cache: Callable[[int], T],
                 'Encountered error while fetching channel: %s', e)
             return None
     return result
+
+
+def get_emoji_by_name(emojis: Sequence[discord.Emoji], name: str) -> str:
+    """Find an emoji in a sequence by its name, returning a default emoji when not found
+
+    Args:
+        emojis (Sequence[discord.Emoji]): The sequence of emojis to search through
+        name (str): The name of the emoji to find
+
+    Returns:
+        str: The emoji, rendered for Discord
+    """
+    for e in emojis:
+        if e.name.lower() == name.replace(' ', '').lower():
+            return str(e)
+    return '❓'
