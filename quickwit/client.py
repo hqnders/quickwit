@@ -14,7 +14,10 @@ formatter = logging.Formatter(
 handler.setFormatter(formatter)
 logger.addHandler(handler)
 
-quickwit = commands.Bot(command_prefix="/", intents=discord.Intents.all())
+intents = discord.Intents.default()
+intents.members = True
+
+quickwit = commands.Bot(command_prefix="/", intents=intents)
 
 
 async def load_extensions():

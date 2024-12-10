@@ -82,7 +82,7 @@ class CRUD(commands.Cog):
                      event_type: discord.app_commands.Choice[str] = None,
                      image: discord.Attachment = None, reminder: int = DEFAULT_REMINDER_MINUTES):
         """Creates an event, see command description for further instruction
-        
+
         Args:
             name (str): The name of the event
             description (str): The description of the event
@@ -109,8 +109,16 @@ class CRUD(commands.Cog):
                 name=EVENT_CHANNEL_CATEGORY,
                 reason='Required to create events')
 
+        bot_member = interaction.guild.get_member(self.bot.user.id)
+        permission_overwrite = {interaction.guild.default_role:
+                                discord.PermissionOverwrite(
+                                    send_messages=False, send_messages_in_threads=True),
+                                bot_member: discord.PermissionOverwrite(
+                                    send_messages=True)
+                                }
+
         event_channel = await interaction.guild.create_text_channel(
-            name=name, category=event_channel_category, reason='Hosting an event')
+            name=name, category=event_channel_category, reason='Hosting an event', overwrites=permission_overwrite)
         await interaction.response.send_message(
             content=f'Event {name} created! <#{event_channel.id}>', ephemeral=True)
 
@@ -156,9 +164,9 @@ class CRUD(commands.Cog):
             event, event_channel.id, scheduled_event.id, interaction.guild_id, reminder_time))
 
         # Send the pinned event overview message with associated UI
-        header_message = await event_channel.send(content=event.header_message(), file=file)
+        await event_channel.send(content=event.header_message(), file=file)
         await event_channel.send(content=event.message(), view=event_view)
-        await header_message.pin()
+        await event_channel.create_thread(name='Discussion', type=discord.ChannelType.public_thread, auto_archive_duration=10080)
         getLogger(__name__).info(f'Created event \"{event.name}\" (channel {event_channel.id}, scheduled {scheduled_event.id})')  # noqa
 
     @discord.app_commands.command(description='Edit this channel\'s event')
@@ -264,7 +272,7 @@ class CRUD(commands.Cog):
         channel = await utils.grab_by_id(
             channel_id, self.bot.get_channel, self.bot.fetch_channel)  # type: discord.TextChannel
         if channel is not None:
-            await channel.delete('Event has ended')
+            await channel.delete(reason='Event has ended')
 
         # Delete associated scheduled event
         guild = await utils.grab_by_id(
@@ -273,4 +281,4 @@ class CRUD(commands.Cog):
             scheduled_event = await utils.grab_by_id(
                 scheduled_event_id, guild.get_scheduled_event, guild.fetch_scheduled_event)  # type: discord.ScheduledEvent # noqa
             if scheduled_event is not None:
-                await scheduled_event.delete('Event has ended')
+                await scheduled_event.delete(reason='Event has ended')

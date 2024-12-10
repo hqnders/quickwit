@@ -81,9 +81,13 @@ class Event:
         return split_registrations
 
     def _append_registrations(self, message: str, split_registrations: dict[Registration.Status, dict[int, Registration]]) -> str:
+        statusses_handled = 0
         for status in split_registrations:
+            if statusses_handled == 2:
+                # Extra newline to split sure and possible attendees
+                message += '\n'
             for user_id, registration in split_registrations[status].items():
                 message += self.ATTENDEE_FORMAT.format(
-                    status=registration.status[1], user_id=user_id)
-        message += '\n\n'
+                    status=registration.status.value[1], user_id=user_id)
+            statusses_handled += 1
         return message

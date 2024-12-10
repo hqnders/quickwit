@@ -15,14 +15,17 @@ class JobEvent(event.Event):
     ATTENDEE_FORMAT = "{status} {job} <@{user_id}>\n"
 
     def _append_registrations(self, message, split_registrations: dict[Registration.Status, dict[int, Registration]]):
+        statusses_handled = 0
         for registrations_for_status in split_registrations.values():
+            if statusses_handled == 2:
+                message += '\n'
             for user_id, registration in registrations_for_status.items():
                 status = registration.status.value[1]
                 job = registration.job.value[1]
 
                 message += self.ATTENDEE_FORMAT.format(
                     status=status, job=job, user_id=user_id)
-        message += '\n\n'
+            statusses_handled += 1
         return message
 
 
