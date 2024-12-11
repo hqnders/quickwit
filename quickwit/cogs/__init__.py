@@ -1,8 +1,7 @@
 """All cogs that are to be registered to quickwit"""
-from quickwit.cogs.crud import CRUD
-from quickwit.cogs.persistent_storage import PersistentStorage
-from quickwit.cogs.storage import Storage, Event
-from quickwit.cogs.timezone import Timezone
-from quickwit.cogs.registration import Registration
-from quickwit.cogs.reminder import Reminder
-from quickwit.cogs.announce import Announce
+from .crud import CRUD
+from .storage import Storage
+from .timezone import Timezone
+from .reminder import Reminder
+from .announce import Announce
+from .ui import UI

@@ -3,7 +3,7 @@ from logging import getLogger
 import pytz
 import discord
 from discord.ext import commands
-import quickwit.cogs.storage as storage
+import quickwit.cogs.cache as cache
 
 
 class Timezone(commands.Cog):
@@ -20,7 +20,7 @@ class Timezone(commands.Cog):
             interaction (discord.Interaction): The Discord interaction relating to the command call
             timezone (str): The timezone to apply, e.g. \'Europe/Amsterdam\'
         """
-        storage_cog = self.bot.get_cog('Storage')  # type: storage.Storage
+        storage_cog = self.bot.get_cog('Storage')  # type: cache.Cache
 
         for possible_timezone in pytz.all_timezones:
             if possible_timezone.lower() == timezone.lower().strip():

@@ -2,7 +2,7 @@
 from logging import getLogger
 from discord.ext import tasks, commands
 from quickwit import utils
-import quickwit.cogs.storage as storage
+import quickwit.cogs.cache as cache
 
 MESSAGE_FORMAT = "{name} by <@{organiser}> will start <t:{start}:R>\n"
 
@@ -18,7 +18,7 @@ class Reminder(commands.Cog):
     @tasks.loop(minutes=1)
     async def send_reminders(self):
         """Sends out reminders for upcoming events"""
-        storage_cog = self.bot.get_cog('Storage')  # type: storage.Storage
+        storage_cog = self.bot.get_cog('Storage')  # type: cache.Cache
         reminders = storage_cog.get_active_reminders()
         for channel_id in reminders:
             if channel_id in self.already_reminded:

@@ -46,10 +46,10 @@ class QuickWit(commands.Bot):
         await self.add_cog(cogs.Storage(self))
         await self.add_cog(cogs.CRUD(self))
         await self.add_cog(cogs.Timezone(self))
-        await self.add_cog(cogs.Registration(self))
-        # await self.add_cog(cogs.Reminder(self))
-        # await self.add_cog(cogs.Announce(self))
-        # await self.add_cog(cogs.Overview(self))
+        await self.add_cog(cogs.Reminder(self))
+        await self.add_cog(cogs.Announce(self))
+        await self.add_cog(cogs.UI(self))
+
         try:
             synced = await self.tree.sync()
             logging.getLogger(__name__).info("Synced %i commands", len(synced))
