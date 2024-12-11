@@ -6,6 +6,7 @@ from quickwit import representations, utils
 import quickwit.cogs.storage as storage
 from quickwit.representations.views import EventViewBuilder
 
+
 class Registration(commands.Cog):
     """Registration Cog to handle all Registration operations"""
 
@@ -72,7 +73,7 @@ class Registration(commands.Cog):
         stored_event = storage_cog.get_event(channel_id)
         if stored_event is None:
             return
-        registration_type = stored_event.event.Registration
+        registration_type = stored_event.Registration
         registration = registration_type(
             status=registration_type.Status.ATTENDING)
         if isinstance(registration, representations.JobEventRepresentation.Registration):
@@ -81,7 +82,12 @@ class Registration(commands.Cog):
                 break
         await self.on_register(channel_id, user.id, registration)
         channel = await utils.grab_by_id(channel_id, self.bot.get_channel, self.bot.fetch_channel)
-        await channel.send(f'{user.name} Registered through the Scheduled Event link')
+
+        member = await utils.grab_by_id(user.id, event.guild.get_member, event.guild.fetch_member)
+        name = user.display_name
+        if member is not None:
+            name = member.display_name
+        await channel.send(f'{name} Registered through the Scheduled Event link')
 
     @commands.Cog.listener()
     async def on_scheduled_event_user_remove(self, event: discord.ScheduledEvent,
@@ -99,4 +105,9 @@ class Registration(commands.Cog):
             return
         await self.on_unregister(channel_id, user.id)
         channel = await utils.grab_by_id(channel_id, self.bot.get_channel, self.bot.fetch_channel)
-        await channel.send(f'{user.name} Unregistered through the Scheduled Event link')
+
+        member = await utils.grab_by_id(user.id, event.guild.get_member, event.guild.fetch_member)
+        name = user.display_name
+        if member is not None:
+            name = member.display_name
+        await channel.send(f'{name} Unregistered through the Scheduled Event link')
