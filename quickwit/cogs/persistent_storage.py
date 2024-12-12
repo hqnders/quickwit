@@ -130,7 +130,7 @@ class PersistentStorage(storage.Storage, name='Storage'):
         for row in result:
             status = event_class.Registration.Status.ATTENDING
             for valid_status in event_class.Registration.Status:
-                if valid_status.value[0] == row[0]:
+                if valid_status.value[0] == row[1]:
                     status = valid_status
                     break
             if issubclass(event_class, events.JobEvent):
