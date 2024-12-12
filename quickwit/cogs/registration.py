@@ -30,7 +30,7 @@ class EventView(discord.ui.View):
         async def callback(self, interaction: discord.Interaction):
             registration_data = self.view.registration_data.get(interaction.user.id, None)  # type: events.Event.Registration # noqa
             if registration_data is None:
-                await interaction.response.send_message("Please fill out your registration informaion", ephemeral=True)
+                await interaction.response.send_message("Please fill out your registration information", ephemeral=True)
                 return
 
             for field in fields(registration_data):
@@ -40,7 +40,6 @@ class EventView(discord.ui.View):
 
             interaction.client.dispatch(
                 'register', interaction.channel_id, interaction.user.id, self.view.registration_data[interaction.user.id])
-            self.view.registration_data.pop(interaction.user.id)
             await interaction.response.defer()
 
     class _PersistentLeaveButton(discord.ui.Button):

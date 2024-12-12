@@ -128,9 +128,16 @@ class PersistentStorage(storage.Storage, name='Storage'):
         result = self._connection.execute(
             'SELECT user_id, status, job FROM Registrations WHERE channel_id=?', [channel_id]).fetchall()
         for row in result:
+            status = event_class.Registration.Status.ATTENDING
+            for valid_status in event_class.Registration.Status:
+                if valid_status.value[0] == row[0]:
+                    status = valid_status
+                    break
             if issubclass(event_class, events.JobEvent):
-                event.registrations[row[0]] = event_class.Registration(
-                    status=row[1], job=row[2])
+                for valid_job in event_class.Registration.Job:
+                    if valid_job.value[0] == row[2]:
+                        event.registrations[row[0]] = event_class.Registration(
+                            status=status, job=valid_job)
             else:
                 # TODO: Give warning if assuming default registration when it may not be an Event but a new type
                 event.registrations[row[0]] = event_class.Registration(
