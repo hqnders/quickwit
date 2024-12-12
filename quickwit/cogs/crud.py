@@ -15,6 +15,7 @@ DEFAULT_EVENT_DURATION_MINUTES = 60
 DEFAULT_REMINDER_MINUTES = 30
 MAX_EVENT_NAME_LENGTH = 25
 EVENT_CHANNEL_CATEGORY = 'events'
+DEFAULT_EVENT_TYPE = EventType.FF14
 
 
 class CRUD(commands.Cog):
@@ -23,12 +24,13 @@ class CRUD(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
         self.storage = self.bot.get_cog(Storage.__name__)
-        self.prune_events.start()
 
     async def cog_load(self):
         if self.storage is None:
             self.storage = Storage(self.bot)
             await self.bot.add_cog(self.storage)
+        await self.prune_events()
+        self.prune_events.start()
 
     @discord.app_commands.command(description="Create an event")
     @discord.app_commands.choices(event_type=[
@@ -100,13 +102,14 @@ class CRUD(commands.Cog):
         )
 
         # Create and store the event
+        if event_type is None:
+            event_type = DEFAULT_EVENT_TYPE
         reminder_time = utc_start - timedelta(minutes=reminder)
         utc_end = utc_start + timedelta(minutes=duration)
         event = Event(event_channel.id, event_type,
                       name, description, scheduled_event.id, interaction.user.id,
                       utc_start, utc_end, interaction.guild_id, reminder_time)
         self.storage.store_event(event)
-        self.bot.dispatch(BODY_MESSAGE_SENT_EVENT_NAME, event)
         getLogger(__name__).info('Created event \"%s\" (channel %i, scheduled %i)',
                                  event.name, event_channel.id, scheduled_event.id)
 
@@ -228,12 +231,11 @@ class CRUD(commands.Cog):
     async def prune_events(self):
         """Cleanup all events that have ended"""
         getLogger(__name__).info('Pruning events')
-        past_events = self.storage.get_past_event_channel_ids()
+        past_events = self.storage.get_past_events()
 
         # Delete the channels
-        for channel_id in past_events:
-            event = self.storage.get_event(channel_id)
-            await self._clean_guild(channel_id, event.scheduled_event_id, event.guild_id)
+        for channel_id, scheduled_event_id, guild_id in past_events:
+            await self._clean_guild(channel_id, scheduled_event_id, guild_id)
             self.storage.delete_event(channel_id)
         getLogger(__name__).info('Done pruning events')
 

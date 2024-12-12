@@ -7,6 +7,7 @@ from quickwit.views import JoinButton, LeaveButton, StatusSelect, JobSelect
 from quickwit.models import Status, JobType, Registration, Event, EventType, JOB_EVENT_JOB_TYPE_MAP
 from quickwit.utils import grab_by_id
 from .events import REGISTER_EVENT_NAME, UNREGISTER_EVENT_NAME, BODY_MESSAGE_SENT_EVENT_NAME
+from .storage import Storage
 
 RegistrationData: TypeAlias = tuple[Status | None, JobType | None]
 
@@ -16,6 +17,7 @@ class UI(commands.Cog):
 
     def __init__(self, bot: commands.Bot):
         self.bot = bot
+        self.storage = self.bot.get_cog(Storage.__name__)
         custom_id_prefix = str(bot.user.id)
         self.registration_data = dict[int, dict[int, RegistrationData]]()
         self.event_type_view_map = dict[EventType, discord.ui.View]()
@@ -31,12 +33,18 @@ class UI(commands.Cog):
                                         self._job_callback, self.bot.emojis))
             self.event_type_view_map[event_type] = view
 
+    async def cog_load(self):
+        if self.storage is None:
+            self.storage = Storage(self.bot)
+            await self.bot.add_cog(self.storage)
+
     async def _join_callback(self, interaction: discord.Interaction):
         registration = self._ensure_existing_registration(
             interaction.user.id, interaction.channel_id)
 
         if registration[0] is None:
-            await interaction.response.send_message(content='No Attendance status found', ephemeral=True)
+            await interaction.response.send_message(content='No Attendance status found',
+                                                    ephemeral=True)
             return
         await interaction.response.defer()
 
@@ -72,19 +80,23 @@ class UI(commands.Cog):
         return self.registration_data[user_id][channel_id]
 
     @commands.Cog.listener()
-    async def on_scheduled_event_user_add(self, event: discord.ScheduledEvent, user: discord.User):
+    async def on_scheduled_event_user_add(self, scheduled_event: discord.ScheduledEvent, user: discord.User):
         """Listens to a user joining a scheduled event
 
         Args:
-            event (discord.ScheduledEvent): The event in question
+            scheduled_event (discord.ScheduledEvent): The event in question
             user (discord.User): The user registering
         """
-        channel_id = int(event.location.split('#')[1].split('>')[0])
+        # Ensure the event is associated with an event
+        if not self.storage.is_associated_with_event(scheduled_event.id):
+            return
+
+        channel_id = int(scheduled_event.location.split('#')[1].split('>')[0])
         channel = await grab_by_id(channel_id, self.bot.get_channel, self.bot.fetch_channel)
         if channel is None:
             return
 
-        member = await grab_by_id(user.id, event.guild.get_member, event.guild.fetch_member)
+        member = await grab_by_id(user.id, scheduled_event.guild.get_member, scheduled_event.guild.fetch_member)
         name = user.display_name
         if member is not None:
             name = member.display_name
@@ -94,20 +106,24 @@ class UI(commands.Cog):
                           Registration(user.id, Status.ATTENDING))
 
     @commands.Cog.listener()
-    async def on_scheduled_event_user_remove(self, event: discord.ScheduledEvent,
+    async def on_scheduled_event_user_remove(self, scheduled_event: discord.ScheduledEvent,
                                              user: discord.User):
         """Listens to a user leaving the scheduled event
 
         Args:
-            event (discord.ScheduledEvent): The event in question
+            scheduled_event (discord.ScheduledEvent): The event in question
             user (discord.User): The user unregistering
         """
-        channel_id = int(event.location.split('#')[1].split('>')[0])
+        # Ensure the event is associated with an event
+        if not self.storage.is_associated_with_event(scheduled_event.id):
+            return
+
+        channel_id = int(scheduled_event.location.split('#')[1].split('>')[0])
         channel = await grab_by_id(channel_id, self.bot.get_channel, self.bot.fetch_channel)
         if channel is None:
             return
 
-        member = await grab_by_id(user.id, event.guild.get_member, event.guild.fetch_member)
+        member = await grab_by_id(user.id, scheduled_event.guild.get_member, scheduled_event.guild.fetch_member)
         name = user.display_name
         if member is not None:
             name = member.display_name

@@ -21,15 +21,10 @@ class QuickWit(commands.Bot):
         logger.setLevel(logging.INFO)
         handler = logging.StreamHandler()
         formatter = logging.Formatter(
-            '\x1b[30;1m%(asctime)s\x1b[0m %(levelname)-8s\x1b\
-                [0m \x1b[35m%(name)s\x1b[0m %(message)s',
+            '\x1b[30;1m%(asctime)s\x1b[0m %(levelname)-8s\x1b[0m \x1b[35m%(name)s\x1b[0m %(message)s',
             '%Y-%m-%d %H:%M:%S')
         handler.setFormatter(formatter)
         logger.addHandler(handler)
-
-    async def setup_hook(self):
-        self.add_listener(self.on_ready, 'on_ready')
-        self.add_listener(self.on_error, 'on_error')
 
     async def on_ready(self):
         """Called when quickwit is ready"""
@@ -43,7 +38,6 @@ class QuickWit(commands.Bot):
 
     async def _load_extensions(self):
         """Loads all relevant extensions"""
-        await self.add_cog(cogs.Storage(self))
         await self.add_cog(cogs.CRUD(self))
         await self.add_cog(cogs.Timezone(self))
         await self.add_cog(cogs.Reminder(self))

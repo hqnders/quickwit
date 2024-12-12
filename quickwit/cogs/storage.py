@@ -139,8 +139,13 @@ class Storage(commands.Cog):
 
         return stored_event
 
-    def get_past_event_channel_ids(self) -> list[int]:
-        """Retrieve all channel IDs from events that have ended"""
+    def get_past_events(self) -> list[tuple[int, int, int]]:
+        """Retrieve all channel IDs from events that have ended
+
+        Returns:
+            list[tuple[int, int, int]]: A list of tuples consisting of channel_id,
+                scheduled_event_id and guild_id of past events
+        """
         end = round(datetime.now().timestamp())
         result = self.conn.execute(
             'SELECT channel_id, scheduled_event_id, guild_id FROM Events WHERE utc_end<=?', [end])
@@ -153,22 +158,29 @@ class Storage(commands.Cog):
             'SELECT channel_id FROM Events WHERE utc_start>? AND reminder<?', [now, now]).fetchall()
         return [result[0] for result in results]
 
+    def is_associated_with_event(self, scheduled_event_id: int) -> bool:
+        """Return whether the scheduled event is associated with a stored event"""
+        result = self.conn.execute('SELECT channel_id FROM Events WHERE scheduled_event_id=?',
+                                   [scheduled_event_id])
+        return result.arraysize > 0
+
     @commands.Cog.listener(name=USER_TIMEZONE_REGISTRATION_EVENT_NAME)
-    def on_timezone_registration(self, user_id: int, user_timezone: str):
+    async def on_timezone_registration(self, user_id: int, user_timezone: str):
         """Set a users timezone"""
         self.conn.execute(
             self.scripts[NecessaryScripts.SET_TIMEZONE], [user_id, user_timezone])
         self.conn.commit()
 
     @commands.Cog.listener(name=REGISTER_EVENT_NAME)
-    def on_register(self, channel_id: int, registration: Registration):
+    async def on_register(self, channel_id: int, registration: Registration):
         """Store a new registration"""
         self.conn.execute(self.scripts[NecessaryScripts.REGISTER_USER],
-                          [channel_id, registration.user_id, registration.job, str(registration.status)])
+                          [channel_id, registration.user_id, registration.job,
+                           str(registration.status)])
         self.conn.commit()
 
     @commands.Cog.listener(name=UNREGISTER_EVENT_NAME)
-    def on_unregister(self, channel_id: int, user_id: int):
+    async def on_unregister(self, channel_id: int, user_id: int):
         """Remove a registration from storage"""
         self.conn.execute(
             'DELETE FROM Registrations WHERE channel_id=? AND user_id=?', [channel_id, user_id])
