@@ -40,7 +40,7 @@ class StatusSelect(discord.ui.Select):
         self._true_callback = callback
 
     async def callback(self, interaction):
-        return self._true_callback(interaction, self.values[0])
+        return await self._true_callback(interaction, self.values[0])
 
 
 class JobSelect(discord.ui.Select):
@@ -57,4 +57,4 @@ class JobSelect(discord.ui.Select):
         self._true_callback = callback
 
     async def callback(self, interaction):
-        return self._true_callback(interaction, self.values[0])
+        return await self._true_callback(interaction, self.values[0])

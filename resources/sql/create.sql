@@ -9,7 +9,7 @@ CREATE TABLE IF NOT EXISTS Events (
     event_type TEXT NOT NULL, -- Event type
     name TEXT NOT NULL, -- Name of the event
     description TEXT NOT NULL, -- Description of the event
-    scheduled_event_id INTEGER NOT NULL, -- Discord Scheduled Event ID
+    scheduled_event_id INTEGER, -- Discord Scheduled Event ID
     organiser_id INTEGER NOT NULL, -- Discord User ID of the event organiser
     utc_start INTEGER NOT NULL, -- Seconds since epoch until event start in UTC
     utc_end INTEGER NOT NULL, -- Seconds since epoch until event end in UTC

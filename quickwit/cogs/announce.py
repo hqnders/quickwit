@@ -1,9 +1,9 @@
 """The announcement cog to announce to all registrations"""
+from logging import getLogger()
 from discord import app_commands, Interaction
-from discord.ext import commands
+from discord.ext import commands, tasks
+from quickwit.utils import grab_by_id
 from .storage import Storage
-
-MESSAGE_FORMAT = "**Message by <@{organiser}> to all registrated people:**\n{message}\n"
 
 
 class Announce(commands.Cog):
@@ -11,7 +11,14 @@ class Announce(commands.Cog):
 
     def __init__(self, bot: commands.Bot):
         self.bot = bot
-        self.already_reminded = []
+        self.storage = self.bot.get_cog(Storage.__name__)
+        self.already_reminded = list[int]()
+        self.send_reminders.start()
+
+    async def cog_load(self):
+        if self.storage is None:
+            self.storage = Storage(self.bot)
+            await self.bot.add_cog(self.storage)
 
     @app_commands.command()
     async def announce(self, interaction: Interaction, message: str):
@@ -21,26 +28,48 @@ class Announce(commands.Cog):
         Args:
             message (str): The announcement to make
         """
-        storage_cog: Storage = self.bot.get_cog('Storage')
-
-        event = storage_cog.get_event(interaction.channel_id)
+        # Announcements can only be made from an event channel
+        event = self.storage.get_event(interaction.channel.id)
         if event is None:
             await interaction.response.send_message(
                 content="Could not find event associated with this channel",
                 ephemeral=True)
             return
 
-        if interaction.user.id != event.event.organiser_id:
+        # Prevent just anyone from making an announcement
+        if interaction.user.id != event.organiser_id:
             await interaction.response.send_message(
                 content="Only the event organiser may make announcements",
                 ephemeral=True)
             return
 
-        message = MESSAGE_FORMAT.format(
-            organiser=event.organiser_id, message=message)
+        message += '\n'
         for registration in event.registrations:
             if registration.user_id != event.organiser_id:
                 message += f'<@{registration.user_id}>'
-        await interaction.channel.send(message)
-        await interaction.response.send_message(content="Announcement has been made",
-                                                ephemeral=True)
+        await interaction.response.send_message(message)
+
+    @tasks.loop(minutes=1)
+    async def send_reminders(self):
+        """Sends out reminders for upcoming events"""
+        reminders = self.storage.get_active_reminders()
+        for channel_id in reminders:
+            if channel_id in self.already_reminded:
+                break
+            event = self.storage.get_event(channel_id)
+            channel = await grab_by_id(channel_id, self.bot.get_channel,
+                                       self.bot.fetch_channel)
+            if channel is None:
+                self.already_reminded.append(channel_id)
+                break
+            start = round(event.utc_start.timestamp())
+            message = f'{
+                event.name} by <@{event.organiser_id}> will start <t:{start}:R>\n'
+            for registration in event.registrations:
+                if registration.user_id != event.organiser_id:
+                    message += f'<@{registration.user_id}>'
+            await channel.send(message)
+
+            getLogger(__name__).info(
+                'Sent reminder for event %s', event.name)
+            self.already_reminded.append(event.channel_id)

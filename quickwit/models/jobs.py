@@ -1,8 +1,11 @@
+"""Contains all models necessary for job events"""
 from enum import StrEnum
 from typing import TypeVar
 
 
+# Discord only allows a maximum of 25 options
 class FF14Job(StrEnum):
+    """FF14 Jobs and some custom jobs"""
     ALL_ROUNDER = 'Allrounder'
     WAR = 'Warrior'
     PLD = 'Paladin'
@@ -20,21 +23,33 @@ class FF14Job(StrEnum):
     RPR = 'Reaper'
     BRD = 'Bard'
     MCH = 'Machinist'
-    DNC = 'Dancer',
+    DNC = 'Dancer'
     BLM = 'Black Mage'
     SMN = 'Summoner'
     RDM = 'Red Mage'
     PCT = 'Pictomancer'
-    BLU = 'Blue Mage'
+    # BLU = 'Blue Mage'
+    DPS = 'DPS'
+    # MELEE = 'Melee'
+    # RANGED = 'Ranged'
+    # CASTER = 'Caster'
+    HEALER = 'Healer'
+    # BARRIER_HEALER = 'Barrier Healer'
+    # PURE_HEALER = 'Pure Healer'
+    TANK = 'Tank'
+    # MAIN_TANK = 'Main Tank'
+    # OFF_TANK = 'Off Tank'
 
 
 class FashionShowJob(StrEnum):
+    """Jobs available to fashion shows"""
     CROWD = 'Crowd'
     MODEL = 'Model'
     JUDGE = 'Judge'
 
 
 class CampfireEventJob(StrEnum):
+    """Jobs available to campfire events"""
     CROWD = 'Crowd'
     SPEAKER = 'Speaker'
 

@@ -4,6 +4,12 @@ import discord
 from quickwit.utils import get_emoji_by_name
 from quickwit.models import Event, Registration, Status
 
+DEFAULT_DURATION_MINUTES = 60
+START_EMOJI_NAME = 'Start'
+DURATION_EMOJI_NAME = 'Duration'
+ORGANISER_EMOJI_NAME = 'Organiser'
+PEOPLE_EMOJI_NAME = 'People'
+
 
 class RegistrationMessage:
     """Represents an event registration"""
@@ -18,21 +24,15 @@ class RegistrationMessage:
         if self.registration.job is not None:
             job_emoji = get_emoji_by_name(
                 self.emojis, self.registration.job)
-            return f'{status_emoji}{job_emoji} {self.registration.status} \
-                <@{self.registration.user_id}>'
-        return f'{status_emoji} {self.registration.status} <@{self.registration.user_id}>'
+            return f'{status_emoji}{job_emoji} <@{self.registration.user_id}>'
+        return f'{status_emoji} <@{self.registration.user_id}>'
 
 
 class EventMessage:
     """Represents an event and it's associated message in Discord"""
-    DEFAULT_DURATION_MINUTES = 60
-    START_EMOJI_NAME = 'Start'
-    DURATION_EMOJI_NAME = 'Duration'
-    ORGANISER_EMOJI_NAME = 'Organiser'
-    PEOPLE_EMOJI_NAME = 'People'
 
-    def __init__(self, event: Event, emojis: Sequence[discord.Emoji], event_role_id: int):
-        self.event_role_id = event_role_id
+    def __init__(self, event: Event, emojis: Sequence[discord.Emoji], event_role: discord.Role):
+        self.event_role = event_role
         self.emojis = emojis
         self.event = event
 
@@ -52,26 +52,24 @@ class EventMessage:
                 ) + len(split_registrations[Status.LATE])
 
         # Get the emojis ready
-        start_emoji = get_emoji_by_name(self.emojis, self.START_EMOJI_NAME)
-        organiser_emoji = get_emoji_by_name(self.emojis, self.START_EMOJI_NAME)
-        people_emoji = get_emoji_by_name(self.emojis, self.PEOPLE_EMOJI_NAME)
+        start_emoji = get_emoji_by_name(self.emojis, START_EMOJI_NAME)
+        organiser_emoji = get_emoji_by_name(self.emojis, START_EMOJI_NAME)
+        people_emoji = get_emoji_by_name(self.emojis, PEOPLE_EMOJI_NAME)
 
         # Generate the message
         start = int(self.event.utc_start.timestamp())
-        message = f'<@&{self.event_role_id}>\n{start_emoji} <t:{start}:F>\n{organiser_emoji} \
-            <@{self.event.organiser_id}>'
+        message = f'{self.event_role.mention}\n{start_emoji} <t:{start}:F>\n{organiser_emoji} <@{self.event.organiser_id}>'  # noqa
 
         # Forego mentioning a duration if it's a default duration
         duration_minutes = (self.event.utc_end -
                             self.event.utc_start).total_seconds() / 60
-        if duration_minutes != self.DEFAULT_DURATION_MINUTES:
+        if duration_minutes != DEFAULT_DURATION_MINUTES:
             duration_emoji = get_emoji_by_name(
-                self.emojis, self.DURATION_EMOJI_NAME)
+                self.emojis, DURATION_EMOJI_NAME)
             message += f'\t{duration_emoji} {duration_minutes} minutes'
 
         # Finish with representing attendeeds
-        message += f'\n\n{self.event.description}\n\n{people_emoji} \
-            {guaranteed_attendees} - {maximum_attendees} Attendees:\n'
+        message += f'\n\n{self.event.description}\n\n{people_emoji} {guaranteed_attendees} - {maximum_attendees} Attendees:\n'  # noqa
 
         for registrations_for_status in split_registrations.values():
             for registration in registrations_for_status:

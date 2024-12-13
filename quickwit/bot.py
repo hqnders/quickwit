@@ -15,6 +15,7 @@ class QuickWit(commands.Bot):
         super().__init__(command_prefix='/', intents=intents)
 
         self._admin_user_id = admin_user_id
+        self.admin = None
 
         # Setup logger
         logger = logging.getLogger('quickwit')
@@ -31,17 +32,26 @@ class QuickWit(commands.Bot):
         logging.getLogger(__name__).info("Logged in as %s", self.user)
         await self._load_extensions()
 
+        # Notify admin of boot
+        self.admin = await utils.grab_by_id(self._admin_user_id, self.get_user, self.fetch_user)
+        if self.admin is not None:
+            await self.admin.send(content="Booting up")
+
     async def on_error(self, event_method: str, /, *_, **__):
-        owner = await utils.grab_by_id(self.owner_id, self.get_user, self.fetch_user)
-        await owner.send(
-            content=f'An error occured during execution of {event_method}:\n{sys.exception()}')
+        error = f'An error occured during execution of {
+            event_method}:\n{sys.exception()}'
+        logging.getLogger(__name__).error(error)
+
+        # Attempt to notify admin of error
+        if self.admin is not None:
+            await self.admin.send(content=error)
 
     async def _load_extensions(self):
         """Loads all relevant extensions"""
-        await self.add_cog(cogs.CRUD(self))
+        await self.add_cog(cogs.EventCRUD(self))
         await self.add_cog(cogs.Timezone(self))
-        await self.add_cog(cogs.Reminder(self))
         await self.add_cog(cogs.Announce(self))
+        await self.add_cog(cogs.ScheduledEvents(self))
         await self.add_cog(cogs.UI(self))
 
         try:

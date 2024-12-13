@@ -6,13 +6,49 @@ from logging import getLogger
 from datetime import datetime, timezone
 from discord.ext import commands
 from quickwit.models import Event, Registration
-from .cache import Cache
-from .events import REGISTER_EVENT_NAME, UNREGISTER_EVENT_NAME, \
-    USER_TIMEZONE_REGISTRATION_EVENT_NAME
 
 DATA_FOLDER_NAME = 'data'
 DATABASE_NAME = 'events.db'
 SCRIPTS_PATH = 'resources/sql'
+
+
+class Cache:
+    """Cog for caching event storage"""
+
+    def __init__(self):
+        self._events_cache = dict[int, Event]()
+
+    def cache_event(self, stored_event: Event):
+        """Stores an event, also used to overwrite an existing event"""
+        self._events_cache[stored_event.channel_id] = stored_event
+
+    def uncache_event(self, channel_id: int):
+        """Delete an existing event from cache"""
+        self._events_cache.pop(channel_id, None)
+
+    def get_event(self, channel_id: int) -> Event | None:
+        """Fetch an event based on channel ID from cache"""
+        return self._events_cache.get(channel_id, None)
+
+    def register(self, channel_id: int, registration: Registration):
+        """Ensures new registrations are added to cache"""
+        if channel_id not in self._events_cache.keys():
+            return
+
+        for existing_registration in self._events_cache[channel_id].registrations:
+            if existing_registration.user_id == registration.user_id:
+                existing_registration = registration
+                return
+        self._events_cache[channel_id].registrations.append(registration)
+
+    def unregister(self, channel_id: int, user_id: int):
+        """Ensures registrations are removed from cache"""
+        if channel_id not in self._events_cache.keys():
+            return
+        for existing_registration in self._events_cache[channel_id].registrations:
+            if existing_registration.user_id == user_id:
+                del existing_registration
+                return
 
 
 class NecessaryScripts(StrEnum):
@@ -28,7 +64,7 @@ class Storage(commands.Cog):
 
     def __init__(self, bot: commands.Bot):
         self.bot = bot
-        self.cache = self.bot.get_cog(Cache.__name__)
+        self.cache = Cache()
         self.conn = sqlite3.connect(os.path.join(
             DATA_FOLDER_NAME, DATABASE_NAME))
 
@@ -45,12 +81,6 @@ class Storage(commands.Cog):
         self.conn.executescript(
             self.scripts[NecessaryScripts.CREATION])
         self.conn.commit()
-
-    async def cog_load(self):
-        # Ensure there is always a cache available
-        if self.cache is None:
-            self.cache = Cache(self.bot)
-            await self.bot.add_cog(self.cache)
 
     def get_timezone(self, user_id: int) -> str:
         """Fetch the timezone of a user, returning UTC on default"""
@@ -121,9 +151,8 @@ class Storage(commands.Cog):
         reminder = datetime.fromtimestamp(result[8], timezone.utc)
 
         # Create the event
-        stored_event = Event(channel_id, event_type, name, description,
-                             scheduled_event_id, organiser_id, utc_start,
-                             utc_end, guild_id, reminder)
+        stored_event = Event(channel_id, event_type, name, description, organiser_id,
+                             utc_start, utc_end, guild_id, reminder, scheduled_event_id)
 
         # Fetch registrations
         result = self.conn.execute(
@@ -164,24 +193,23 @@ class Storage(commands.Cog):
                                    [scheduled_event_id])
         return result.arraysize > 0
 
-    @commands.Cog.listener(name=USER_TIMEZONE_REGISTRATION_EVENT_NAME)
-    async def on_timezone_registration(self, user_id: int, user_timezone: str):
+    def update_timezone(self, user_id: int, user_timezone: str):
         """Set a users timezone"""
         self.conn.execute(
             self.scripts[NecessaryScripts.SET_TIMEZONE], [user_id, user_timezone])
         self.conn.commit()
 
-    @commands.Cog.listener(name=REGISTER_EVENT_NAME)
-    async def on_register(self, channel_id: int, registration: Registration):
+    def register(self, channel_id: int, registration: Registration):
         """Store a new registration"""
         self.conn.execute(self.scripts[NecessaryScripts.REGISTER_USER],
                           [channel_id, registration.user_id, registration.job,
                            str(registration.status)])
         self.conn.commit()
+        self.cache.register(channel_id, registration)
 
-    @commands.Cog.listener(name=UNREGISTER_EVENT_NAME)
-    async def on_unregister(self, channel_id: int, user_id: int):
+    def unregister(self, channel_id: int, user_id: int):
         """Remove a registration from storage"""
         self.conn.execute(
             'DELETE FROM Registrations WHERE channel_id=? AND user_id=?', [channel_id, user_id])
         self.conn.commit()
+        self.cache.unregister(channel_id, user_id)

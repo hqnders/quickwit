@@ -1,3 +1,4 @@
+"""Contains all models necessary for Events"""
 from dataclasses import dataclass
 from datetime import datetime
 from enum import StrEnum
@@ -26,10 +27,10 @@ class Event:
     event_type: EventType
     name: str
     description: str
-    scheduled_event_id: int
     organiser_id: int
     utc_start: datetime
     utc_end: datetime
     guild_id: int
     reminder: datetime
+    scheduled_event_id: int | None = None
     registrations = list[Registration]()
