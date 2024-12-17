@@ -30,8 +30,8 @@ class RegistrationMessage:
             if job_emoji == '❓':
                 job_emoji = self.registration.job
 
-            return f'{status_emoji}{job_emoji} <@{self.registration.user_id}>'
-        return f'{status_emoji} <@{self.registration.user_id}>'
+            return f'{job_emoji} <@{self.registration.user_id}>'
+        return f'<@{self.registration.user_id}>'
 
 
 class EventMessage:
@@ -77,13 +77,14 @@ class EventMessage:
         # Finish with representing attendeeds
         message += f'\n\n{self.event.description}\n\n{people_emoji} {guaranteed_attendees} - {maximum_attendees} Attendees:'  # noqa
 
-        registrations_divided = False
         for status, registrations in split_registrations.items():
-            if registrations_divided is False and status == Status.TENTATIVE:
-                registrations_divided = True
-                message += '\n'
+            if len(registrations) == 0:
+                continue
+            status_emoji = get_emoji_by_name(self.emojis, status)
+            message += f'\n{status_emoji} {status}:'
             for registration in registrations:
                 message += f'\n{str(RegistrationMessage(registration, self.emojis))}'
+            message += '\n'
 
         return message
 
