@@ -32,8 +32,16 @@ with the controllers being implemented as `discord.py` cogs.
 
 ## Event Map
 The following table provides an overview of which Cog interacts with which event
-|**Cog**            |`event_created`|`event_altered`|`scheduled_event_user_add` |`scheduled_event_user_remove`  |`guild_channel_delete` |`event_deleted`|
-| ---               | ---           | ---           | ---                       | ---                           | ---                   | ---           |
-|**EventCRUD**      | Dispatches    | Dispatches    |                           |                               | Listens               |               |
-|**ScheduledEvents**| Listens       | Both          | Listens                   | Listens                       | Listens               | Listens       |
-|**UI**             |               | Both          |                           |                               |                       |               |
+
+### Custom Events
+|**Cog**            |`event_created`|`event_altered`|`registrations_altered`|`event_deleted`|
+| ---               | ---           | ---           | ---                   | ---           |
+|**EventCRUD**      | Dispatches    | Dispatches    |                       |               |
+|**ScheduledEvents**| Listens       | Both          | Dispatches            | Listens       |
+|**UI**             |               | Listens       | Both                  |               |
+
+### Built-in Events
+|**Cog**            |`scheduled_event_user_add` |`scheduled_event_user_remove`  |`guild_channel_delete` |
+| ---               |                           | ---                           | ---                   |
+|**EventCRUD**      |                           |                               | Listens               |
+|**ScheduledEvents**| Listens                   | Listens                       | Listens               |

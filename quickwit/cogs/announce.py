@@ -1,6 +1,6 @@
 """The announcement cog to announce to all registrations"""
 from logging import getLogger
-from discord import app_commands, Interaction
+from discord import app_commands, Interaction, Thread
 from discord.ext import commands, tasks
 from quickwit.utils import grab_by_id
 from .storage import Storage
@@ -28,8 +28,13 @@ class Announce(commands.Cog):
         Args:
             message (str): The announcement to make
         """
+        # Get channel_id from parent in case the channel is a thread
+        channel_id = interaction.channel_id
+        if isinstance(interaction.channel, Thread):
+            channel_id = interaction.channel.parent.id
+
         # Announcements can only be made from an event channel
-        event = self.storage.get_event(interaction.channel.id)
+        event = self.storage.get_event(channel_id)
         if event is None:
             await interaction.response.send_message(
                 content="Could not find event associated with this channel",

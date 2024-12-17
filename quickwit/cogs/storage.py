@@ -5,7 +5,7 @@ from enum import StrEnum
 from logging import getLogger
 from datetime import datetime, timezone
 from discord.ext import commands
-from quickwit.models import Event, Registration
+from quickwit.models import Event, Registration, EventType
 
 DATA_FOLDER_NAME = 'data'
 DATABASE_NAME = 'events.db'
@@ -35,9 +35,9 @@ class Cache:
         if channel_id not in self._events_cache.keys():
             return
 
-        for existing_registration in self._events_cache[channel_id].registrations:
+        for i, existing_registration in enumerate(self._events_cache[channel_id].registrations):
             if existing_registration.user_id == registration.user_id:
-                existing_registration = registration
+                self._events_cache[channel_id].registrations[i] = registration
                 return
         self._events_cache[channel_id].registrations.append(registration)
 
@@ -45,9 +45,9 @@ class Cache:
         """Ensures registrations are removed from cache"""
         if channel_id not in self._events_cache.keys():
             return
-        for existing_registration in self._events_cache[channel_id].registrations:
+        for i, existing_registration in enumerate(self._events_cache[channel_id].registrations):
             if existing_registration.user_id == user_id:
-                del existing_registration
+                self._events_cache[channel_id].registrations.pop(i)
                 return
 
 
@@ -81,6 +81,8 @@ class Storage(commands.Cog):
         self.conn.executescript(
             self.scripts[NecessaryScripts.CREATION])
         self.conn.commit()
+
+        self._modernize()
 
     def get_timezone(self, user_id: int) -> str:
         """Fetch the timezone of a user, returning UTC on default"""
@@ -221,3 +223,13 @@ class Storage(commands.Cog):
         result = self.conn.execute('SELECT channel_id FROM Registrations WHERE user_id=?',
                                    [user_id])
         return [row[0] for row in result.fetchall()]
+
+    def _modernize(self):
+        """Old versions of this bot used differing event_type names, ensure they're modernized"""
+        self.conn.execute('UPDATE Events SET event_type=? WHERE event_type=?',
+                          [EventType.FF14, 'FF14Event'])
+        self.conn.execute('UPDATE Events SET event_type=? WHERE event_type=?',
+                          [EventType.FASHION, 'FashionShow'])
+        self.conn.execute('UPDATE Events SET event_type=? WHERE event_type=?',
+                          [EventType.CAMPFIRE, 'CampfireEvent'])
+        self.conn.commit()

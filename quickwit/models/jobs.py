@@ -7,6 +7,9 @@ from typing import TypeVar
 class FF14Job(StrEnum):
     """FF14 Jobs and some custom jobs"""
     ALL_ROUNDER = 'Allrounder'
+    TANK = 'Tank'
+    HEALER = 'Healer'
+    DPS = 'DPS'
     WAR = 'Warrior'
     PLD = 'Paladin'
     DRK = 'Dark Knight'
@@ -29,14 +32,11 @@ class FF14Job(StrEnum):
     RDM = 'Red Mage'
     PCT = 'Pictomancer'
     # BLU = 'Blue Mage'
-    DPS = 'DPS'
     # MELEE = 'Melee'
     # RANGED = 'Ranged'
     # CASTER = 'Caster'
-    HEALER = 'Healer'
     # BARRIER_HEALER = 'Barrier Healer'
     # PURE_HEALER = 'Pure Healer'
-    TANK = 'Tank'
     # MAIN_TANK = 'Main Tank'
     # OFF_TANK = 'Off Tank'
 

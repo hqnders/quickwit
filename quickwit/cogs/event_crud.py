@@ -60,8 +60,10 @@ class EventCRUD(commands.Cog):
         await self.prune_events()
         self.prune_events.start()
 
-    async def cog_app_command_error(self, interaction, error):
-        await interaction.response.send_message(content='Encountered an error, please contact the admin', ephemeral=True)
+    async def cog_app_command_error(self, interaction: discord.Interaction, _):
+        await interaction.response.send_message(
+            content='Encountered an error, please contact the admin',
+            ephemeral=True)
 
     @discord.app_commands.command(description="Create an event")
     @discord.app_commands.choices(event_type=[

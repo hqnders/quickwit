@@ -21,9 +21,15 @@ class RegistrationMessage:
     def __str__(self):
         status_emoji = get_emoji_by_name(
             self.emojis, self.registration.status)
+        if status_emoji == '❓':
+            status_emoji = f'{self.registration.status} '
+
         if self.registration.job is not None:
             job_emoji = get_emoji_by_name(
                 self.emojis, self.registration.job)
+            if job_emoji == '❓':
+                job_emoji = self.registration.job
+
             return f'{status_emoji}{job_emoji} <@{self.registration.user_id}>'
         return f'{status_emoji} <@{self.registration.user_id}>'
 
@@ -38,7 +44,7 @@ class EventMessage:
 
     def header_message(self) -> str:
         """Generates a Discord message representing the event header"""
-        return f'# {get_emoji_by_name(self.emojis, self.event.event_type)} {self.event.name}'
+        return f'# {get_emoji_by_name(self.emojis, self.event.event_type)} {self.event.name}\n{self.event_role.mention}'  # noqa
 
     def body_message(self) -> str:
         """Generates a Discord formatted string representing the event body"""
@@ -58,7 +64,7 @@ class EventMessage:
 
         # Generate the message
         start = int(self.event.utc_start.timestamp())
-        message = f'{self.event_role.mention}\n{start_emoji} <t:{start}:F>\n{organiser_emoji} <@{self.event.organiser_id}>'  # noqa
+        message = f'{start_emoji} <t:{start}:F>\n{organiser_emoji} <@{self.event.organiser_id}>'  # noqa
 
         # Forego mentioning a duration if it's a default duration
         duration_minutes = (self.event.utc_end -
@@ -69,10 +75,14 @@ class EventMessage:
             message += f'\t{duration_emoji} {duration_minutes} minutes'
 
         # Finish with representing attendeeds
-        message += f'\n\n{self.event.description}\n\n{people_emoji} {guaranteed_attendees} - {maximum_attendees} Attendees:\n'  # noqa
+        message += f'\n\n{self.event.description}\n\n{people_emoji} {guaranteed_attendees} - {maximum_attendees} Attendees:'  # noqa
 
-        for registrations_for_status in split_registrations.values():
-            for registration in registrations_for_status:
+        registrations_divided = False
+        for status, registrations in split_registrations.items():
+            if registrations_divided is False and status == Status.TENTATIVE:
+                registrations_divided = True
+                message += '\n'
+            for registration in registrations:
                 message += f'\n{str(RegistrationMessage(registration, self.emojis))}'
 
         return message
@@ -81,7 +91,7 @@ class EventMessage:
         return f'{self.header_message()}\n{self.body_message()}'
 
     def _split_registrations_by_status(self, registrations: list[Registration]) \
-            -> dict[Status, list[RegistrationMessage]]:
+            -> dict[Status, list[Registration]]:
         split_registrations = dict[Status, list[Registration]]()
         for status in Status:
             split_registrations[status] = [
