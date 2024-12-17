@@ -132,7 +132,7 @@ class EventCRUD(commands.Cog):
         utc_end = utc_start + timedelta(minutes=duration)
         event = Event(event_channel.id, event_type,
                       name, description, interaction.user.id,
-                      utc_start, utc_end, interaction.guild_id, reminder_time)
+                      utc_start, utc_end, interaction.guild_id, reminder_time, [])
         self.storage.store_event(event)
 
         getLogger(__name__).info('Created event \"%s\" (channel %i)',

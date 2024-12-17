@@ -32,5 +32,5 @@ class Event:
     utc_end: datetime
     guild_id: int
     reminder: datetime
+    registrations: list[Registration]
     scheduled_event_id: int | None = None
-    registrations = list[Registration]()

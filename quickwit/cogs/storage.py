@@ -151,18 +151,19 @@ class Storage(commands.Cog):
         utc_end = datetime.fromtimestamp(result[6], timezone.utc)
         guild_id = result[7]
         reminder = datetime.fromtimestamp(result[8], timezone.utc)
-
-        # Create the event
-        stored_event = Event(channel_id, event_type, name, description, organiser_id,
-                             utc_start, utc_end, guild_id, reminder, scheduled_event_id)
+        registrations = []
 
         # Fetch registrations
         result = self.conn.execute(
             'SELECT user_id, status, job FROM Registrations WHERE channel_id=?',
             [channel_id]).fetchall()
         for row in result:
-            stored_event.registrations.append(
+            registrations.append(
                 Registration(row[0], row[1], row[2]))
+
+        # Create the event
+        stored_event = Event(channel_id, event_type, name, description, organiser_id,
+                             utc_start, utc_end, guild_id, reminder, registrations, scheduled_event_id)
 
         # Cache event for future reference
         if self.cache is not None and cached_event is None:

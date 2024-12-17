@@ -114,8 +114,8 @@ class UI(commands.Cog):
 
         # Edit the event creation messages
         event_role = await get_event_role(guild)
-        event_message = EventMessage(event, self.bot.emojis, event_role)
-        await messages[1].edit(content=event_message.body_message())
+        event_message = EventMessage(event, self.bot.emojis, event_role).body_message()
+        await messages[1].edit(content=event_message)
 
     @discord.app_commands.command()
     async def refresh_ui(self, interaction: discord.Interaction):
