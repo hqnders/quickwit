@@ -6,7 +6,7 @@ import pytz
 from discord.ext import commands, tasks
 from quickwit.models import EventType, Event
 from quickwit.utils import grab_by_id, get_timezone_aware_datetime_from_supported_formats, \
-    get_datetime_from_supported_formats, get_event_role
+    get_datetime_from_supported_formats
 from .storage import Storage
 
 MAX_EVENT_DURATION_MINUTES = 300
@@ -65,7 +65,7 @@ class EventCRUD(commands.Cog):
             content='Encountered an error, please contact the admin',
             ephemeral=True)
 
-    @discord.app_commands.command(description="Create an event")
+    @discord.app_commands.command()
     @discord.app_commands.choices(event_type=[
         discord.app_commands.Choice(
             name=event_type,
@@ -74,12 +74,12 @@ class EventCRUD(commands.Cog):
                      str, start: str, duration: int = DEFAULT_EVENT_DURATION_MINUTES,
                      event_type: discord.app_commands.Choice[str] = None,
                      image: discord.Attachment = None, reminder: int = DEFAULT_REMINDER_MINUTES):
-        """Creates an event, see command description for further instruction
+        """Creates an event
 
         Args:
             name (str): The name of the event
             description (str): The description of the event
-            start (str): The start of the event (DD-MM[-YYYY] HH:MM)
+            start (str): The start of the event ([DD-MM[-YYYY]] HH:MM)
             duration (int): The duration of the event in minutes
             event_type (discord.app_commands.Choice[str]): The type of event
             image (discord.Attachment): The cover image of the event
@@ -210,10 +210,14 @@ class EventCRUD(commands.Cog):
         """Remove a member who left the guild from any associated events"""
         channel_ids = self.storage.get_registered_event_ids(member.id)
         for channel_id in channel_ids:
+            channel = await grab_by_id(channel_id, self.bot.get_channel, self.bot.fetch_channel)
+            if channel is not None:
+                await channel.send(f'{member.display_name} unregistered by leaving the server')
+
             self.storage.unregister(channel_id, member.id)
             event = self.storage.get_event(channel_id)
             if event is not None:
-                self.bot.dispatch('event_altered', event, None)
+                self.bot.dispatch('registrations_altered', event, None)
 
     @tasks.loop(time=time(0, 0, 0))
     async def prune_events(self):

@@ -36,7 +36,7 @@ The following table provides an overview of which Cog interacts with which event
 ### Custom Events
 |**Cog**            |`event_created`|`event_altered`|`registrations_altered`|`event_deleted`|
 | ---               | ---           | ---           | ---                   | ---           |
-|**EventCRUD**      | Dispatches    | Dispatches    |                       |               |
+|**EventCRUD**      | Dispatches    | Dispatches    | Dispatches            |               |
 |**ScheduledEvents**| Listens       | Both          | Dispatches            | Listens       |
 |**UI**             |               | Listens       | Both                  |               |
 
