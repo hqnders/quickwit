@@ -86,9 +86,9 @@ class Storage(commands.Cog):
         """Fetch the timezone of a user, returning UTC on default"""
         result = self.conn.execute(
             'SELECT timezone FROM UserTimezones WHERE user_id=?', [user_id]).fetchone()
-        if result is not None:
-            result = result[0]
-        return result
+        if result is None:
+            return 'UTC'
+        return result[0]
 
     def store_event(self, event: Event):
         """Store an event in persistent storage"""
@@ -187,11 +187,13 @@ class Storage(commands.Cog):
             'SELECT channel_id FROM Events WHERE utc_start>? AND reminder<?', [now, now]).fetchall()
         return [result[0] for result in results]
 
-    def is_associated_with_event(self, scheduled_event_id: int) -> bool:
+    def get_event_from_scheduled_event_id(self, scheduled_event_id: int) -> Event | None:
         """Return whether the scheduled event is associated with a stored event"""
         result = self.conn.execute('SELECT channel_id FROM Events WHERE scheduled_event_id=?',
-                                   [scheduled_event_id])
-        return result.arraysize > 0
+                                   [scheduled_event_id]).fetchone()
+        if result is None:
+            return None
+        return self.get_event(result[0])
 
     def update_timezone(self, user_id: int, user_timezone: str):
         """Set a users timezone"""
@@ -213,3 +215,9 @@ class Storage(commands.Cog):
             'DELETE FROM Registrations WHERE channel_id=? AND user_id=?', [channel_id, user_id])
         self.conn.commit()
         self.cache.unregister(channel_id, user_id)
+
+    def get_registered_event_ids(self, user_id: int) -> list[int]:
+        """Fetch the ID of all events where the user is registered to"""
+        result = self.conn.execute('SELECT channel_id FROM Registrations WHERE user_id=?',
+                                   [user_id])
+        return [row[0] for row in result.fetchall()]

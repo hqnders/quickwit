@@ -106,9 +106,14 @@ class EventCRUD(commands.Cog):
         bot_member = interaction.guild.get_member(self.bot.user.id)
         permission_overwrite = {interaction.guild.default_role:
                                 discord.PermissionOverwrite(
-                                    send_messages=False, send_messages_in_threads=True),
+                                    send_messages=False,
+                                    send_messages_in_threads=True),
                                 bot_member: discord.PermissionOverwrite(
-                                    send_messages=True)
+                                    send_messages=True),
+                                interaction.user: discord.PermissionOverwrite(
+                                    send_messages=True,
+                                    manage_channels=True
+                                )
                                 }
 
         # Create event channel
@@ -188,6 +193,26 @@ class EventCRUD(commands.Cog):
         self.storage.store_event(event)
         self.bot.dispatch('event_altered', event, image)
 
+    @commands.Cog.listener()
+    async def on_guild_channel_delete(self, channel: discord.abc.GuildChannel):
+        """Delete the associated event when the channel is deleted"""
+        event = self.storage.get_event(channel.id)
+        if event is None:
+            return
+
+        self.storage.delete_event(event.channel_id)
+        self.bot.dispatch('event_deleted', event)
+
+    @commands.Cog.listener()
+    async def on_member_remove(self, member: discord.Member):
+        """Remove a member who left the guild from any associated events"""
+        channel_ids = self.storage.get_registered_event_ids(member.id)
+        for channel_id in channel_ids:
+            self.storage.unregister(channel_id, member.id)
+            event = self.storage.get_event(channel_id)
+            if event is not None:
+                self.bot.dispatch('event_altered', event, None)
+
     @tasks.loop(time=time(0, 0, 0))
     async def prune_events(self):
         """Cleanup all events that have ended"""
@@ -195,24 +220,8 @@ class EventCRUD(commands.Cog):
         past_events = self.storage.get_past_events()
 
         # Delete the channels
-        for channel_id, scheduled_event_id, guild_id in past_events:
-            await self._clean_guild(channel_id, scheduled_event_id, guild_id)
-            self.storage.delete_event(channel_id)
+        for channel_id, _, __ in past_events:
+            channel = await grab_by_id(channel_id, self.bot.get_channel, self.bot.fetch_channel)
+            if channel is not None:
+                await channel.delete(reason='Event has ended')
         getLogger(__name__).info('Done pruning events')
-
-    async def _clean_guild(self, channel_id: int, scheduled_event_id: int, guild_id: int):
-        # Delete associated channel
-        channel: discord.TextChannel = await grab_by_id(channel_id, self.bot.get_channel,
-                                                        self.bot.fetch_channel)
-        if channel is not None:
-            await channel.delete(reason='Event has ended')
-
-        # Delete associated scheduled event
-        guild: discord.Guild = await grab_by_id(guild_id, self.bot.get_guild, self.bot.fetch_guild)
-        if guild is not None:
-            scheduled_event: discord.ScheduledEvent = await grab_by_id(
-                scheduled_event_id,
-                guild.get_scheduled_event,
-                guild.fetch_scheduled_event)
-            if scheduled_event is not None:
-                await scheduled_event.delete(reason='Event has ended')

@@ -42,7 +42,85 @@ class UI(commands.Cog):
             self.storage = Storage(self.bot)
             await self.bot.add_cog(self.storage)
 
+    @commands.Cog.listener()
+    async def on_event_created(self, event: Event, attachment: discord.Attachment | None):
+        """Sends messages in the newly created event channel to represent the event and it's UI"""
+        # Ensure the guild exists
+        guild = await grab_by_id(event.guild_id, self.bot.get_guild, self.bot.fetch_guild)
+        if guild is None:
+            getLogger(__name__).warning(
+                'Could not find guild %i', event.guild_id)
+            return
+
+        # Ensure the channel exists within the guild
+        channel = await grab_by_id(event.channel_id, guild.get_channel, guild.fetch_channel)
+        if channel is None:
+            getLogger(__name__).warning(
+                'Could not find channel %i within guild %i', event.channel_id, guild.id)
+            return
+
+        # Grab the view corresponding to the event type
+        view = self.event_type_view_map.get(event.event_type, None)
+        if view is None:
+            getLogger(__name__).warning(
+                'Could not find view for %s', event.event_type)
+            return
+
+        # Send the event creation messages
+        event_role = await get_event_role(guild)
+        event_representation = EventMessage(
+            event, self.bot.emojis, event_role)
+        file = None
+        if attachment is None:
+            file = discord.File(DEFAULT_IMAGE_PATH)
+        if attachment is not None:
+            file = attachment.to_file()
+        await channel.send(content=event_representation.header_message(), file=file)
+        await channel.send(content=event_representation.body_message(), view=view)
+        await channel.create_thread(name='Discussion', type=discord.ChannelType.public_thread,
+                                    auto_archive_duration=10080)
+
+    @commands.Cog.listener()
+    async def on_event_altered(self, event: Event, file: discord.File | None):
+        """Upates message representations of events on alteration"""
+        await self._refresh_event_ui(event, file)
+
+    async def _refresh_event_ui(self, event: Event, file: discord.File | None):
+        # Ensure the channel exists
+        channel = await grab_by_id(event.channel_id, self.bot.get_channel, self.bot.fetch_channel)
+        if channel is None:
+            return
+
+        # Ensure event creation messages are present
+        messages = [message async for message in channel.history(limit=2, oldest_first=True)]
+        if len(messages) != 2:
+            return
+        header = messages[0]
+        body = messages[1]
+
+        # Ensure the guild exists
+        guild = await grab_by_id(event.guild_id, self.bot.get_guild, self.bot.fetch_guild)
+        if guild is None:
+            return
+
+        # Edit the event creation messages
+        event_role = await get_event_role(guild)
+        event_message = EventMessage(event, self.bot.emojis, event_role)
+        if file is not None:
+            await header.edit(attachments=[file])
+        await header.edit(content=event_message.header_message())
+        await body.edit(content=event_message.body_message())
+
     async def _join_callback(self, interaction: discord.Interaction):
+        # Make sure event exists
+        event = self.storage.get_event(interaction.channel_id)
+        if event is None:
+            interaction.response.send_message(
+                content='UI Element is not associated with any event, how did you get here?!',
+                ephemeral=True)
+            return
+
+        # Ensure there is registration data to edit
         registration = self._ensure_existing_registration(
             interaction.user.id, interaction.channel_id)
 
@@ -57,16 +135,44 @@ class UI(commands.Cog):
         # We can send out the response already while we parse the registration
         await interaction.response.defer()
 
+        # Build the registration
         registration = Registration(
             interaction.user.id, registration[0], registration[1])
         self.storage.register(interaction.channel_id, registration)
 
-        event = self.storage.get_event(interaction.channel_id)
+        # Inform the other cogs of the registration
         self.bot.dispatch('event_altered', event, None)
 
     async def _leave_callback(self, interaction: discord.Interaction):
-        self.storage.unregister(interaction.channel_id, interaction.user.id)
+        # Make sure event exists
+        event = self.storage.get_event(interaction.channel_id)
+        if event is None:
+            interaction.response.send_message(
+                content='UI Element is not associated with any event, how did you get here?!',
+                ephemeral=True)
+            return
+
+        # We can send out the response already while we parse the registration
         await interaction.response.defer()
+
+        # Silently stop further actions if user was not registered in the first place
+        registered = False
+        for registration in event.registrations:
+            if registration.user_id == interaction.user.id:
+                registered = True
+                break
+        if not registered:
+            return
+
+        # Unregister from the event
+        self.storage.unregister(interaction.channel_id, interaction.user.id)
+        for registration in event.registrations:
+            if registration.user_id == interaction.user.id:
+                event.registrations.remove(registration)
+                break
+
+        # Inform other cogs of unregistration
+        self.bot.dispatch('event_altered', event, None)
 
     async def _status_callback(self, interaction: discord.Interaction, status: Status):
         registration = self._ensure_existing_registration(
@@ -89,64 +195,3 @@ class UI(commands.Cog):
         if self.registration_data[user_id].get(channel_id, None) is None:
             self.registration_data[user_id][channel_id] = (None, None)
         return self.registration_data[user_id][channel_id]
-
-    @commands.Cog.listener()
-    async def on_event_created(self, event: Event, attachment: discord.Attachment | None):
-        """Sends messages in the newly created event channel to represent the event and it's UI"""
-        guild = await grab_by_id(event.guild_id, self.bot.get_guild, self.bot.fetch_guild)
-        if guild is None:
-            getLogger(__name__).warning(
-                'Could not find guild %i in bot', event.guild_id)
-            return
-
-        channel = await grab_by_id(event.channel_id, guild.get_channel, guild.fetch_channel)
-        if channel is None:
-            getLogger(__name__).warning(
-                'Could not find channel %i within guild %i', event.channel_id, guild.id)
-            return
-
-        view = self.event_type_view_map.get(event.event_type, None)
-        if view is None:
-            getLogger(__name__).warning(
-                'Could not find view for %s', event.event_type)
-            return
-
-        event_role = await get_event_role(guild)
-
-        event_representation = EventMessage(
-            event, self.bot.emojis, event_role)
-        file = None
-        if attachment is None:
-            file = discord.File(DEFAULT_IMAGE_PATH)
-        if attachment is not None:
-            file = attachment.to_file()
-        await channel.send(content=event_representation.header_message(), file=file)
-        await channel.send(content=event_representation.body_message(), view=view)
-        await channel.create_thread(name='Discussion', type=discord.ChannelType.public_thread,
-                                    auto_archive_duration=10080)
-
-    @commands.Cog.listener()
-    async def on_event_altered(self, event: Event, file: discord.File | None):
-        """Upates message representations of events on alteration"""
-        channel = await grab_by_id(event.channel_id, self.bot.get_channel, self.bot.fetch_channel)
-        if channel is None:
-            return
-
-        messages = [message async for message in channel.history(limit=2, oldest_first=True)]
-        if len(messages) != 2:
-            return
-
-        header = messages[0]
-        body = messages[1]
-
-        if file is not None:
-            await header.edit(attachments=[file])
-
-        guild = await grab_by_id(event.guild_id, self.bot.get_guild, self.bot.fetch_guild)
-        if guild is None:
-            return
-
-        event_role = await get_event_role(guild)
-        event_message = EventMessage(event, self.bot.emojis, event_role)
-        await header.edit(content=event_message.header_message())
-        await body.edit(content=event_message.body_message())

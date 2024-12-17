@@ -1,5 +1,5 @@
 """The announcement cog to announce to all registrations"""
-from logging import getLogger()
+from logging import getLogger
 from discord import app_commands, Interaction
 from discord.ext import commands, tasks
 from quickwit.utils import grab_by_id
