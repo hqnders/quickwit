@@ -59,7 +59,7 @@ class EventMessage:
 
         # Get the emojis ready
         start_emoji = get_emoji_by_name(self.emojis, START_EMOJI_NAME)
-        organiser_emoji = get_emoji_by_name(self.emojis, START_EMOJI_NAME)
+        organiser_emoji = get_emoji_by_name(self.emojis, ORGANISER_EMOJI_NAME)
         people_emoji = get_emoji_by_name(self.emojis, PEOPLE_EMOJI_NAME)
 
         # Generate the message
@@ -67,8 +67,8 @@ class EventMessage:
         message = f'{start_emoji} <t:{start}:F>\n{organiser_emoji} <@{self.event.organiser_id}>'  # noqa
 
         # Forego mentioning a duration if it's a default duration
-        duration_minutes = (self.event.utc_end -
-                            self.event.utc_start).total_seconds() / 60
+        duration_minutes = round((self.event.utc_end -
+                            self.event.utc_start).total_seconds() / 60)
         if duration_minutes != DEFAULT_DURATION_MINUTES:
             duration_emoji = get_emoji_by_name(
                 self.emojis, DURATION_EMOJI_NAME)
