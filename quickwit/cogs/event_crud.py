@@ -61,9 +61,12 @@ class EventCRUD(commands.Cog):
         self.prune_events.start()
 
     async def cog_app_command_error(self, interaction: discord.Interaction, _):
-        await interaction.response.send_message(
-            content='Encountered an error, please contact the admin',
-            ephemeral=True)
+        message = 'Encountered an error, please contact the admin'
+        if interaction.response.is_done():
+            await interaction.followup.send(content=message, ephemeral=True)
+        else:
+            await interaction.response.send_message(
+                content=message, ephemeral=True)
 
     @discord.app_commands.command()
     @discord.app_commands.choices(event_type=[
@@ -128,6 +131,8 @@ class EventCRUD(commands.Cog):
         # Create and store the event
         if event_type is None:
             event_type = DEFAULT_EVENT_TYPE
+        else:
+            event_type = event_type.value
         reminder_time = utc_start - timedelta(minutes=reminder)
         utc_end = utc_start + timedelta(minutes=duration)
         event = Event(event_channel.id, event_type,
