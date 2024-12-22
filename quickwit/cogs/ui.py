@@ -74,7 +74,7 @@ class UI(commands.Cog):
         if attachment is None:
             file = discord.File(DEFAULT_IMAGE_PATH)
         if attachment is not None:
-            file = attachment.to_file()
+            file = await attachment.to_file()
         await channel.send(content=event_representation.header_message(), file=file)
         await channel.send(content=event_representation.body_message(), view=view)
         await channel.create_thread(name='Discussion', type=discord.ChannelType.public_thread,
