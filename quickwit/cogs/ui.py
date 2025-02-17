@@ -81,7 +81,7 @@ class UI(commands.Cog):
                                     auto_archive_duration=10080)
 
     @commands.Cog.listener()
-    async def on_event_altered(self, event: Event, file: discord.File | None):
+    async def on_event_altered(self, event: Event, attachment: discord.Attachment | None):
         """Upates message representations of events on alteration"""
         messages = await self._grab_creation_messages(event.channel_id)
         if messages is None:
@@ -95,8 +95,8 @@ class UI(commands.Cog):
         # Edit the event creation messages
         event_role = await get_event_role(guild)
         event_message = EventMessage(event, self.bot.emojis, event_role)
-        if file is not None:
-            await messages[0].edit(attachments=[file])
+        if attachment is not None:
+            await messages[0].edit(attachments=[attachment])
         await messages[0].edit(content=event_message.header_message())
         await messages[1].edit(content=event_message.body_message())
 

@@ -1,5 +1,5 @@
 """Cog handling all CRUD operations for Events"""
-from datetime import timedelta, time
+from datetime import timedelta, time, datetime
 from logging import getLogger
 import discord
 import pytz
@@ -13,12 +13,14 @@ MAX_EVENT_DURATION_MINUTES = 300
 DEFAULT_EVENT_DURATION_MINUTES = 60
 DEFAULT_REMINDER_MINUTES = 30
 MAX_EVENT_NAME_LENGTH = 25
+MAX_EVENT_DESCRIPTION_LENGTH = 1000
 EVENT_CHANNEL_CATEGORY = 'events'
 DEFAULT_EVENT_TYPE = EventType.FF14
 
 
 def validate_inputs(name: str | None, start: str | None, duration: int | None,
-                    image: discord.Attachment | None, reminder: int | None):
+                    image: discord.Attachment | None, reminder: int | None,
+                    description: str | None):
     """Predicate for checking whether create and edit options are valid
 
     Raises:
@@ -44,6 +46,9 @@ def validate_inputs(name: str | None, start: str | None, duration: int | None,
     if reminder is not None:
         if reminder < 0:
             raise ValueError('Reminder must be a positive number')
+
+    if description is not None and len(description) > MAX_EVENT_DESCRIPTION_LENGTH:
+        raise ValueError('Description cannot be more than 1000 characters')
 
 
 class EventCRUD(commands.Cog):
@@ -89,7 +94,7 @@ class EventCRUD(commands.Cog):
             reminder (int): Amount of minutes before start to send out a reminder at
         """
         try:
-            validate_inputs(name, start, duration, image, reminder)
+            validate_inputs(name, start, duration, image, reminder, description)
         except ValueError as e:
             await interaction.response.send_message(content=e, ephemeral=True)
             return
@@ -98,6 +103,11 @@ class EventCRUD(commands.Cog):
         user_tz = pytz.timezone(self.storage.get_timezone(interaction.user.id))
         utc_start = get_timezone_aware_datetime_from_supported_formats(
             start, user_tz)
+
+        if utc_start < datetime.now():
+            await interaction.response.send_message(content="Cannot schedule event in the past",
+                                                    ephemeral=True)
+            return
 
         # Get the event channel category, or create if necessary
         event_channel_category = discord.utils.get(
@@ -150,7 +160,7 @@ class EventCRUD(commands.Cog):
                    duration: int = None, image: discord.Attachment = None, reminder: int = None):
         """Edit an existing command, refer to `create` command description for further details"""
         try:
-            validate_inputs(name, start, duration, image, reminder)
+            validate_inputs(name, start, duration, image, reminder, description)
         except ValueError as e:
             await interaction.response.send_message(content=e, ephemeral=True)
             return
@@ -188,6 +198,12 @@ class EventCRUD(commands.Cog):
                 self.storage.get_timezone(interaction.user.id))
             event.utc_start = get_timezone_aware_datetime_from_supported_formats(
                 start, user_tz)
+
+            if event.utc_start < datetime.now():
+                await interaction.response.send_message(content="Cannot schedule event in the past",
+                                                        ephemeral=True)
+                return
+
             event.reminder = event.utc_start - \
                 timedelta(minutes=current_reminder)
             event.utc_end = event.utc_start + \

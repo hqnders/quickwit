@@ -38,10 +38,10 @@ The following table provides an overview of which Cog interacts with which event
 | ---               | ---           | ---           | ---                   | ---           |
 |**EventCRUD**      | Dispatches    | Dispatches    | Dispatches            |               |
 |**ScheduledEvents**| Listens       | Both          | Dispatches            | Listens       |
-|**UI**             |               | Listens       | Both                  |               |
+|**UI**             | Listens       | Listens       | Both                  |               |
 
 ### Built-in Events
 |**Cog**            |`scheduled_event_user_add` |`scheduled_event_user_remove`  |`guild_channel_delete` |
-| ---               |                           | ---                           | ---                   |
+| ---               | ---                       | ---                           | ---                   |
 |**EventCRUD**      |                           |                               | Listens               |
 |**ScheduledEvents**| Listens                   | Listens                       | Listens               |

@@ -23,7 +23,8 @@ class ScheduledEvents(commands.Cog):
             await self.bot.add_cog(self.storage)
 
     @commands.Cog.listener()
-    async def on_scheduled_event_user_add(self, scheduled_event: discord.ScheduledEvent, user: discord.User):
+    async def on_scheduled_event_user_add(self, scheduled_event: discord.ScheduledEvent,
+                                          user: discord.User):
         """Listens to a user joining a scheduled event"""
         # Ensure the event is associated with an event
         event = self.storage.get_event_from_scheduled_event_id(
@@ -37,7 +38,8 @@ class ScheduledEvents(commands.Cog):
             return
 
         # Attempt to get the member display name if they're part of the guild
-        member = await grab_by_id(user.id, scheduled_event.guild.get_member, scheduled_event.guild.fetch_member)
+        member = await grab_by_id(user.id, scheduled_event.guild.get_member,
+                                  scheduled_event.guild.fetch_member)
         name = user.display_name
         if member is not None:
             name = member.display_name
