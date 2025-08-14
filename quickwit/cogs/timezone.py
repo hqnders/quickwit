@@ -3,7 +3,7 @@ from logging import getLogger
 import pytz
 import discord
 from discord.ext import commands
-import quickwit.cogs.storage as storage
+from .storage import Storage
 
 
 class Timezone(commands.Cog):
@@ -11,6 +11,12 @@ class Timezone(commands.Cog):
 
     def __init__(self, bot: commands.Bot):
         self.bot = bot
+        self.storage = self.bot.get_cog(Storage.__name__)
+
+    async def cog_load(self):
+        if self.storage is None:
+            self.storage = Storage(self.bot)
+            await self.bot.add_cog(self.storage)
 
     @discord.app_commands.command(description='Set your timezone to \'Continent/City\'')
     async def timezone(self, interaction: discord.Interaction, timezone: str):
@@ -20,18 +26,21 @@ class Timezone(commands.Cog):
             interaction (discord.Interaction): The Discord interaction relating to the command call
             timezone (str): The timezone to apply, e.g. \'Europe/Amsterdam\'
         """
-        storage_cog = self.bot.get_cog('Storage')  # type: storage.Storage
-
         for possible_timezone in pytz.all_timezones:
             if possible_timezone.lower() == timezone.lower().strip():
-                storage_cog.set_timezone(
+                self.storage.update_timezone(
                     interaction.user.id, possible_timezone)
-                getLogger(__name__).info(
-                    f'User {interaction.user.id} set timezone to {possible_timezone}')
-                await interaction.response.send_message(content=f'Your timezone has been set to {possible_timezone}', ephemeral=True)
+                getLogger(__name__).info('User %i set timezone to %s',
+                                         interaction.user.id, possible_timezone)
+                await interaction.response.send_message(
+                    content=f'Your timezone has been set to {
+                        possible_timezone}',
+                    ephemeral=True)
                 return
 
-        await interaction.response.send_message(content='Invalid timezone! Please use a valid timezone (e.g., \'America/New_York\')', ephemeral=True)
+        await interaction.response.send_message(
+            content='Invalid timezone! Please use a valid timezone (e.g., \'America/New_York\')',
+            ephemeral=True)
 
     @discord.app_commands.command()
     async def list_timezones(self, interaction: discord.Interaction, country_code: str):
@@ -42,11 +51,15 @@ class Timezone(commands.Cog):
         """
         country_code = country_code.upper()
         if country_code not in pytz.country_timezones.keys():
-            await interaction.response.send_message(content='Invalid country code, please use a ISO 3166 country code', ephemeral=True)
+            await interaction.response.send_message(
+                content='Invalid country code, please use a ISO 3166 country code', ephemeral=True)
             return
 
         message = ''
         for timezone in pytz.country_timezones[country_code]:
             message += f"{timezone}\n"
 
-        await interaction.response.send_message(content=f'The following timezones are supported for your country:\n{message}', ephemeral=True)
+        await interaction.response.send_message(
+            content=f'The following timezones are supported for your country:\n{
+                message}',
+            ephemeral=True)

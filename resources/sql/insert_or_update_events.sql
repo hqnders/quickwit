@@ -5,4 +5,5 @@ ON CONFLICT(channel_id) DO UPDATE SET
     description = excluded.description,
     utc_start = excluded.utc_start,
     utc_end = excluded.utc_end,
+    scheduled_event_id = excluded.scheduled_event_id,
     reminder = excluded.reminder;
