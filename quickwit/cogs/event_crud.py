@@ -104,7 +104,7 @@ class EventCRUD(commands.Cog):
         utc_start = get_timezone_aware_datetime_from_supported_formats(
             start, user_tz)
 
-        if utc_start < datetime.now():
+        if utc_start < datetime.now().astimezone():
             await interaction.response.send_message(content="Cannot schedule event in the past",
                                                     ephemeral=True)
             return
@@ -199,7 +199,7 @@ class EventCRUD(commands.Cog):
             event.utc_start = get_timezone_aware_datetime_from_supported_formats(
                 start, user_tz)
 
-            if event.utc_start < datetime.now():
+            if event.utc_start < datetime.now().astimezone():
                 await interaction.response.send_message(content="Cannot schedule event in the past",
                                                         ephemeral=True)
                 return

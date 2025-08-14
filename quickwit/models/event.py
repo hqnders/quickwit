@@ -7,6 +7,7 @@ from .jobs import FF14Job, FashionShowJob, CampfireEventJob
 
 
 class EventType(StrEnum):
+    """Different types of Events that are supported"""
     EVENT = 'Event'
     FF14 = 'Final Fantasy XIV'
     FASHION = 'Fashion Show'

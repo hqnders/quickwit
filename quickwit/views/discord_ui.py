@@ -1,13 +1,13 @@
 from typing import Sequence, Callable, Coroutine, Any
 import discord
 from quickwit.utils import get_emoji_by_name
-from quickwit.models import JobType, Status
+from quickwit.models import JobT, Status
 
 type ButtonCallback = Callable[[discord.Interaction], Coroutine[Any, Any, Any]]
 type StatusSelectCallback = Callable[[
     discord.Interaction, Status], Coroutine[Any, Any, Any]]
 type JobSelectCallback = Callable[[
-    discord.Interaction, JobType], Coroutine[Any, Any, Any]]
+    discord.Interaction, JobT], Coroutine[Any, Any, Any]]
 
 
 class JoinButton(discord.ui.Button):
@@ -46,7 +46,7 @@ class StatusSelect(discord.ui.Select):
 class JobSelect(discord.ui.Select):
     """Selection field for jobs"""
 
-    def __init__(self, custom_id_prefix: str, job_type: JobType, callback: JobSelectCallback, emojis: Sequence[discord.Emoji]):
+    def __init__(self, custom_id_prefix: str, job_type: JobT, callback: JobSelectCallback, emojis: Sequence[discord.Emoji]):
         super().__init__(
             placeholder="Select your job...",
             min_values=1, max_values=1, custom_id=f'{custom_id_prefix}Job',

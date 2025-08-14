@@ -1,7 +1,7 @@
 """Contains all models necessary for registrations"""
 from dataclasses import dataclass
 from enum import StrEnum
-from .jobs import JobType
+from .jobs import JobT
 
 
 class Status(StrEnum):
@@ -17,4 +17,4 @@ class Registration:
     """Represents a registration saved in storage"""
     user_id: int
     status: Status
-    job: JobType | None = None
+    job: JobT | None = None

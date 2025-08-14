@@ -54,4 +54,4 @@ class CampfireEventJob(StrEnum):
     SPEAKER = 'Speaker'
 
 
-JobType = TypeVar('JobType', FF14Job, FashionShowJob, CampfireEventJob)
+JobT = TypeVar('JobT', FF14Job, FashionShowJob, CampfireEventJob)

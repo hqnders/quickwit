@@ -5,10 +5,10 @@ import discord
 from discord.ext import commands
 from quickwit.utils import get_event_role, grab_by_id
 from quickwit.views import JoinButton, LeaveButton, StatusSelect, JobSelect, EventMessage
-from quickwit.models import Status, JobType, Registration, Event, EventType, JOB_EVENT_JOB_TYPE_MAP
+from quickwit.models import Status, JobT, Registration, Event, EventType, JOB_EVENT_JOB_TYPE_MAP
 from .storage import Storage
 
-RegistrationData: TypeAlias = tuple[Status | None, JobType | None]
+RegistrationData: TypeAlias = tuple[Status | None, JobT | None]
 DEFAULT_IMAGE_PATH = 'resources/img/default.png'
 
 
@@ -204,7 +204,7 @@ class UI(commands.Cog):
             status, registration[1])
         await interaction.response.defer()
 
-    async def _job_callback(self, interaction: discord.Interaction, job: JobType):
+    async def _job_callback(self, interaction: discord.Interaction, job: JobT):
         registration = self._ensure_existing_registration(
             interaction.user.id, interaction.channel_id)
         self.registration_data[interaction.user.id][interaction.channel_id] = (
