@@ -21,8 +21,15 @@ class UI(commands.Cog):
         self.registration_data = dict[int, dict[int, RegistrationData]]()
         self.event_type_view_map = dict[EventType, discord.ui.View]()
 
+    async def cog_load(self):
+        if self.storage is None:
+            self.storage = Storage(self.bot)
+            await self.bot.add_cog(self.storage)
+
+        self.bot.emojis += await self.bot.fetch_application_emojis()
+
         # Right now we're taking the bot's ID as the prefix to persistent UI elements
-        custom_id_prefix = str(bot.user.id)
+        custom_id_prefix = str(self.bot.user.id)
 
         # Generate the views for every event type and add them to the bot
         for event_type in EventType:
@@ -36,11 +43,6 @@ class UI(commands.Cog):
                                         self._job_callback, self.bot.emojis))
             self.event_type_view_map[event_type] = view
             self.bot.add_view(view)
-
-    async def cog_load(self):
-        if self.storage is None:
-            self.storage = Storage(self.bot)
-            await self.bot.add_cog(self.storage)
 
     @commands.Cog.listener()
     async def on_event_created(self, event: Event, attachment: discord.Attachment | None):
@@ -114,7 +116,8 @@ class UI(commands.Cog):
 
         # Edit the event creation messages
         event_role = await get_event_role(guild)
-        event_message = EventMessage(event, self.bot.emojis, event_role).body_message()
+        event_message = EventMessage(
+            event, self.bot.emojis, event_role).body_message()
         await messages[1].edit(content=event_message)
 
     @discord.app_commands.command()
