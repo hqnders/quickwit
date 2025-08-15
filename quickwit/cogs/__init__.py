@@ -4,3 +4,4 @@ from .timezone import Timezone
 from .announce import Announce
 from .ui import UI
 from .scheduled_events import ScheduledEvents
+from .roles import Roles

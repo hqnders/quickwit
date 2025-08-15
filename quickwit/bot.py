@@ -59,6 +59,8 @@ class QuickWit(commands.Bot):
             await self.add_cog(cogs.ScheduledEvents(self))
         if cogs.UI.__name__.split('.')[-1] not in self.disabled_cogs:
             await self.add_cog(cogs.UI(self))
+        if cogs.Roles.__name__.split('.')[-1] not in self.disabled_cogs:
+            await self.add_cog(cogs.Roles(self))
 
         try:
             synced = await self.tree.sync()

@@ -18,6 +18,7 @@ The following environment variables are taken into account to configure running 
 | `DISABLED_COGS` | Optional comma-seperated list of Cog names that will be disabled on starting up |
 | `EVENT_CHANNEL_CATEGORY` | Optional name of the event category to create event channels in |
 | `EVENT_ROLE` | Optional name of the role to ping for events |
+| `ROLE_MESSAGE_IDS` | Optional comma-separated list of message IDs that users can react to to assign event roles |
 
 # Bot Requirements
 ## Event Channel Category
@@ -76,7 +77,7 @@ Viper
 ```
 
 ## Intents
-The only intent necessary is `members`, as the bot reads people's name when mentioning who joined via scheduled event interest.
+The only intents necessary are `members` and `reactions`, as the bot reads people's name when mentioning who joined via scheduled event interest.
 
 # Development
 ## Architecture
