@@ -10,5 +10,7 @@ if __name__ == "__main__":
     if token is None:
         print('$DISCORD_TOKEN not set, cannot continue')
         sys.exit(1)
-    quickwit = QuickWit(os.getenv('ADMIN_USER_ID'))
+    disabled_cogs = os.getenv('DISABLED_COGS') or ""
+    disabled_cogs = disabled_cogs.split(',')
+    quickwit = QuickWit(os.getenv('ADMIN_USER_ID'), disabled_cogs)
     quickwit.run(token=os.getenv('DISCORD_TOKEN'))

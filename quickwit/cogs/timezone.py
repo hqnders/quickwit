@@ -17,6 +17,7 @@ class Timezone(commands.Cog):
         if self.storage is None:
             self.storage = Storage(self.bot)
             await self.bot.add_cog(self.storage)
+        getLogger(__name__).info('Successfully loaded cog %s', __name__)
 
     @discord.app_commands.command(description='Set your timezone to \'Continent/City\'')
     async def timezone(self, interaction: discord.Interaction, timezone: str):

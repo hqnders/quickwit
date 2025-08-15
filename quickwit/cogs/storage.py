@@ -65,9 +65,13 @@ class Storage(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
         self.cache = Cache()
-        self.conn = sqlite3.connect(os.path.join(
-            DATA_FOLDER_NAME, DATABASE_NAME))
-
+    
+    async def cog_load(self):
+        database_path = os.path.join(DATA_FOLDER_NAME, DATABASE_NAME)
+        if not os.path.exists(DATA_FOLDER_NAME):
+            os.mkdir(DATA_FOLDER_NAME)
+        self.conn = sqlite3.connect(database_path)
+        
         # Populate the scripts container with all necessary scripts
         self.scripts = dict[NecessaryScripts, str]()
         for file in os.listdir(SCRIPTS_PATH):
@@ -83,6 +87,7 @@ class Storage(commands.Cog):
         self.conn.commit()
 
         self._modernize()
+        getLogger(__name__).info('Successfully loaded cog %s', __name__)
 
     def get_timezone(self, user_id: int) -> str:
         """Fetch the timezone of a user, returning UTC on default"""

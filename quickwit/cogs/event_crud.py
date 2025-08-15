@@ -1,4 +1,5 @@
 """Cog handling all CRUD operations for Events"""
+import os
 from datetime import timedelta, time, datetime
 from logging import getLogger
 import discord
@@ -6,7 +7,7 @@ import pytz
 from discord.ext import commands, tasks
 from quickwit.models import EventType, Event
 from quickwit.utils import grab_by_id, get_timezone_aware_datetime_from_supported_formats, \
-    get_datetime_from_supported_formats
+    get_datetime_from_supported_formats, get_event_role
 from .storage import Storage
 
 MAX_EVENT_DURATION_MINUTES = 300
@@ -14,7 +15,7 @@ DEFAULT_EVENT_DURATION_MINUTES = 60
 DEFAULT_REMINDER_MINUTES = 30
 MAX_EVENT_NAME_LENGTH = 25
 MAX_EVENT_DESCRIPTION_LENGTH = 1000
-EVENT_CHANNEL_CATEGORY = 'events'
+EVENT_CHANNEL_CATEGORY = os.getenv('EVENT_CHANNEL_CATEGORY') or 'events'
 DEFAULT_EVENT_TYPE = EventType.FF14
 
 
@@ -64,6 +65,7 @@ class EventCRUD(commands.Cog):
             await self.bot.add_cog(self.storage)
         await self.prune_events()
         self.prune_events.start()
+        getLogger(__name__).info('Successfully loaded cog %s', __name__)
 
     async def cog_app_command_error(self, interaction: discord.Interaction, _):
         message = 'Encountered an error, please contact the admin'
@@ -117,24 +119,13 @@ class EventCRUD(commands.Cog):
                 name=EVENT_CHANNEL_CATEGORY,
                 reason='Required to create events')
 
-        # Set event channel permissions
-        bot_member = interaction.guild.get_member(self.bot.user.id)
-        permission_overwrite = {interaction.guild.default_role:
-                                discord.PermissionOverwrite(
-                                    send_messages=False,
-                                    send_messages_in_threads=True),
-                                bot_member: discord.PermissionOverwrite(
-                                    send_messages=True),
-                                interaction.user: discord.PermissionOverwrite(
-                                    send_messages=True,
-                                    manage_channels=True
-                                )
-                                }
-
         # Create event channel
         event_channel = await interaction.guild.create_text_channel(
-            name=name, category=event_channel_category, reason='Hosting an event',
-            overwrites=permission_overwrite)
+            name=name, category=event_channel_category, reason='Hosting an event')
+        
+        await event_channel.set_permissions(target=interaction.user, overwrite=discord.PermissionOverwrite(send_messages=True, manage_channels=True), reason="Giving event creator permissions");
+        await event_channel.set_permissions(target=await get_event_role(interaction.guild), overwrite=discord.PermissionOverwrite(view_channel=True, send_messages=False, send_messages_in_threads=True), reason="Giving event participant permissions");
+        
         await interaction.response.send_message(
             content=f'Event {name} created! <#{event_channel.id}>', ephemeral=True)
 
@@ -238,7 +229,7 @@ class EventCRUD(commands.Cog):
             self.storage.unregister(channel_id, member.id)
             event = self.storage.get_event(channel_id)
             if event is not None:
-                self.bot.dispatch('registrations_altered', event, None)
+                self.bot.dispatch('registrations_altered', event)
 
     @tasks.loop(time=time(0, 0, 0))
     async def prune_events(self):

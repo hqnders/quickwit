@@ -1,4 +1,5 @@
 """Contains utility methods used throughout the package"""
+import os
 from logging import getLogger
 from typing import Callable, TypeVar, Coroutine, Sequence
 from datetime import datetime
@@ -7,54 +8,7 @@ import discord
 
 
 T = TypeVar('T')
-
-EVENT_ROLE_NAME = 'Events'
-
-# EMOJIS = [
-#     ('Tank', '<:Tank:1318563147971563541>'),
-#     ('Healer', '<:Healer:1318563129172426782>'),
-#     ('DPS', '<:DPS:1318563106313732106>'),
-#     ('CampfireEvent','<:Campfire:1303500098306572388>'),
-#     ('FashionShow','<:FashionShow:1303500090710687785>'),
-#     ('Judge','<:Judge:1303499086363758732>'),
-#     ('Speaker','<:Speaker:1303499095217930250>'),
-#     ('Crowd','<:Crowd:1303499075865415731>'),
-#     ('Model','<:Model:1303499055434960937>'),
-#     ('Duration','<:Duration:1303485160934604872>'),
-#     ('FinalFantasyXIV','<:FF14:1302571147258236949>'),
-#     ('Event','<:Event:1302570929024536626>'),
-#     ('Attending','<:Attending:1302340634933334137>'),
-#     ('Organiser','<:Organiser:1302339823813787778>'),
-#     ('People','<:People:1302339799436234802>'),
-#     ('Start','<:Start:1302339755224338432>'),
-#     ('Tentative','<:Tentative:1302339734802272267>'),
-#     ('Late','<:Late:1302339715063877793>'),
-#     ('Bench','<:Bench:1302339692355784845>'),
-#     ('Allrounder','<:Allrounder:1302305556966539346>'),
-#     ('Pictomancer','<:Pictomancer:1302304017107652782>'),
-#     ('BlueMage','<:BlueMage:1302300345069994004>'),
-#     ('Samurai','<:Samurai:1302300299729305652>'),
-#     ('Reaper','<:Reaper:1302300288585044139>'),
-#     ('Ninja','<:Ninja:1302300281907970049>'),
-#     ('Monk','<:Monk:1302300274488246322>'),
-#     ('Machinist','<:Machinist:1302300267680890981>'),
-#     ('Dragoon','<:Dragoon:1302300259631894568>'),
-#     ('Dancer','<:Dancer:1302300251679494235>'),
-#     ('Summoner','<:Summoner:1302300220490776656>'),
-#     ('RedMage','<:RedMage:1302300210923569183>'),
-#     ('BlackMage','<:BlackMage:1302300194045694023>'),
-#     ('Bard','<:Bard:1302300185543708733>'),
-#     ('WhiteMage','<:WhiteMage:1302300161271267388>'),
-#     ('Scholar','<:Scholar:1302300155097387118>'),
-#     ('Sage','<:Sage:1302300147753160714>'),
-#     ('Astrologian','<:Astrologian:1302300139624595486>'),
-#     ('Warrior','<:Warrior:1302300106103455835>'),
-#     ('Paladin','<:Paladin:1302300099103166565>'),
-#     ('GunBreaker','<:Gunbreaker:1302300089292951593>'),
-#     ('DarkKnight','<:DarkKnight:1302300076600725616>'),
-#     ('Viper', '<:Viper:1302303987671765114>')
-# ]
-
+EVENT_ROLE_NAME = os.getenv('EVENT_ROLE') or 'Events'
 
 async def grab_by_id(a_id: int, get_from_cache: Callable[[int], T],
                      fetch_from_api: Coroutine[None, int, T]) -> T | None:
@@ -92,10 +46,9 @@ def get_emoji_by_name(emojis: Sequence[discord.Emoji], name: str) -> str:
         str: The emoji, rendered for Discord
     """
     for e in emojis:
-        if e.name.lower() == name.replace(' ', '').lower():
+        if e.name.replace(' ', '').lower() == name.replace(' ', '').lower():
             return str(e)
-        # if e[0].lower() == name.replace(' ', '').lower():
-        #     return e[1]
+    getLogger(__name__).warning('Could not find %s in emojis', name)
     return '❓'
 
 

@@ -21,6 +21,7 @@ class ScheduledEvents(commands.Cog):
         if self.storage is None:
             self.storage = Storage(self.bot)
             await self.bot.add_cog(self.storage)
+        getLogger(__name__).info('Successfully loaded cog %s', __name__)
 
     @commands.Cog.listener()
     async def on_scheduled_event_user_add(self, scheduled_event: discord.ScheduledEvent,

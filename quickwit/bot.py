@@ -9,12 +9,13 @@ from quickwit import cogs, utils
 class QuickWit(commands.Bot):
     """Wrapper around a commands.Bot to provide QuickWit functionalities"""
 
-    def __init__(self, admin_user_id: int):
+    def __init__(self, admin_user_id: int, disabled_cogs: list[str] = []):
         intents = discord.Intents.default()
         intents.members = True
         super().__init__(command_prefix='/', intents=intents)
 
         self._admin_user_id = admin_user_id
+        self.disabled_cogs = disabled_cogs
         self.admin = None
 
         # Setup logger
@@ -38,8 +39,7 @@ class QuickWit(commands.Bot):
             await self.admin.send(content="Booting up")
 
     async def on_error(self, event_method: str, /, *_, **__):
-        error = f'An error occured during execution of {
-            event_method}:\n{sys.exception()}'
+        error = f'An error occured during execution of {event_method}:\n{sys.exception()}'
         logging.getLogger(__name__).error(error)
 
         # Attempt to notify admin of error
@@ -48,11 +48,17 @@ class QuickWit(commands.Bot):
 
     async def _load_extensions(self):
         """Loads all relevant extensions"""
-        await self.add_cog(cogs.EventCRUD(self))
-        await self.add_cog(cogs.Timezone(self))
-        await self.add_cog(cogs.Announce(self))
-        await self.add_cog(cogs.ScheduledEvents(self))
-        await self.add_cog(cogs.UI(self))
+        logging.getLogger(__name__).info("Disabled loading of the following cogs unless required: %s", ", ".join(self.disabled_cogs))
+        if cogs.EventCRUD.__name__.split('.')[-1] not in self.disabled_cogs:
+            await self.add_cog(cogs.EventCRUD(self))
+        if cogs.Timezone.__name__.split('.')[-1] not in self.disabled_cogs:
+            await self.add_cog(cogs.Timezone(self))
+        if cogs.Announce.__name__.split('.')[-1] not in self.disabled_cogs:
+            await self.add_cog(cogs.Announce(self))
+        if cogs.ScheduledEvents.__name__.split('.')[-1] not in self.disabled_cogs:
+            await self.add_cog(cogs.ScheduledEvents(self))
+        if cogs.UI.__name__.split('.')[-1] not in self.disabled_cogs:
+            await self.add_cog(cogs.UI(self))
 
         try:
             synced = await self.tree.sync()

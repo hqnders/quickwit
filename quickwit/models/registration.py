@@ -7,8 +7,8 @@ from .jobs import JobT
 class Status(StrEnum):
     """Represents an attendance status"""
     ATTENDING = 'Attending'
-    BENCH = 'Bench'
-    TENTATIVE = 'Tentative'
+    BACKUP = 'Backup'
+    MAYBE = 'Maybe'
     LATE = 'Late'
 
 

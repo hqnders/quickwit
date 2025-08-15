@@ -13,12 +13,13 @@ class Announce(commands.Cog):
         self.bot = bot
         self.storage = self.bot.get_cog(Storage.__name__)
         self.already_reminded = list[int]()
-        self.send_reminders.start()
 
     async def cog_load(self):
         if self.storage is None:
             self.storage = Storage(self.bot)
             await self.bot.add_cog(self.storage)
+        self.send_reminders.start()
+        getLogger(__name__).info('Successfully loaded cog %s', __name__)
 
     @app_commands.command()
     async def announce(self, interaction: Interaction, message: str):

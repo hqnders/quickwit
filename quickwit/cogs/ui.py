@@ -26,7 +26,8 @@ class UI(commands.Cog):
             self.storage = Storage(self.bot)
             await self.bot.add_cog(self.storage)
 
-        self.bot.emojis += await self.bot.fetch_application_emojis()
+        # Update bot emojis to include the application ones
+        self.emojis = await self.bot.fetch_application_emojis()
 
         # Right now we're taking the bot's ID as the prefix to persistent UI elements
         custom_id_prefix = str(self.bot.user.id)
@@ -37,12 +38,13 @@ class UI(commands.Cog):
             view.add_item(JoinButton(custom_id_prefix, self._join_callback))
             view.add_item(LeaveButton(custom_id_prefix, self._leave_callback))
             view.add_item(StatusSelect(custom_id_prefix,
-                          self._status_callback, self.bot.emojis))
+                          self._status_callback, self.emojis))
             if event_type in JOB_EVENT_JOB_TYPE_MAP:
                 view.add_item(JobSelect(custom_id_prefix, JOB_EVENT_JOB_TYPE_MAP[event_type],
-                                        self._job_callback, self.bot.emojis))
+                                        self._job_callback, self.emojis))
             self.event_type_view_map[event_type] = view
             self.bot.add_view(view)
+        getLogger(__name__).info('Successfully loaded cog %s', __name__)
 
     @commands.Cog.listener()
     async def on_event_created(self, event: Event, attachment: discord.Attachment | None):
@@ -71,7 +73,7 @@ class UI(commands.Cog):
         # Send the event creation messages
         event_role = await get_event_role(guild)
         event_representation = EventMessage(
-            event, self.bot.emojis, event_role)
+            event, self.emojis, event_role)
         file = None
         if attachment is None:
             file = discord.File(DEFAULT_IMAGE_PATH)
@@ -96,9 +98,10 @@ class UI(commands.Cog):
 
         # Edit the event creation messages
         event_role = await get_event_role(guild)
-        event_message = EventMessage(event, self.bot.emojis, event_role)
+        event_message = EventMessage(event, self.emojis, event_role)
         if attachment is not None:
-            await messages[0].edit(attachments=[attachment])
+            file = await attachment.to_file()
+            await messages[0].edit(attachments=[file])
         await messages[0].edit(content=event_message.header_message())
         await messages[1].edit(content=event_message.body_message())
 
@@ -117,7 +120,7 @@ class UI(commands.Cog):
         # Edit the event creation messages
         event_role = await get_event_role(guild)
         event_message = EventMessage(
-            event, self.bot.emojis, event_role).body_message()
+            event, self.emojis, event_role).body_message()
         await messages[1].edit(content=event_message)
 
     @discord.app_commands.command()

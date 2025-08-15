@@ -52,9 +52,9 @@ class EventMessage:
         split_registrations = self._split_registrations_by_status(
             self.event.registrations)
         guaranteed_attendees = len(split_registrations[Status.ATTENDING]) + len(
-            split_registrations[Status.BENCH])
+            split_registrations[Status.BACKUP])
         maximum_attendees = guaranteed_attendees + \
-            len(split_registrations[Status.TENTATIVE]
+            len(split_registrations[Status.MAYBE]
                 ) + len(split_registrations[Status.LATE])
 
         # Get the emojis ready
@@ -75,7 +75,12 @@ class EventMessage:
             message += f'\t{duration_emoji} {duration_minutes} minutes'
 
         # Finish with representing attendeeds
-        message += f'\n\n{self.event.description}\n\n{people_emoji} {guaranteed_attendees} - {maximum_attendees} Attendees:'  # noqa
+        message += f'\n\n{self.event.description}\n\n{people_emoji}'
+        if maximum_attendees > guaranteed_attendees:
+            message += f' {guaranteed_attendees} - {maximum_attendees}'
+        else:
+            message += f' {guaranteed_attendees}'
+        message +=  ' Attendees:'
 
         for status, registrations in split_registrations.items():
             if len(registrations) == 0:
