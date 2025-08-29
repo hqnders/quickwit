@@ -1,7 +1,7 @@
 """The roles cog to manage event roles"""
 import os
 from logging import getLogger
-from discord import RawReactionActionEvent
+from discord import RawReactionActionEvent, Member
 from discord.ext import commands
 from quickwit.utils import get_event_role, grab_by_id
 from .storage import Storage
@@ -46,5 +46,11 @@ class Roles(commands.Cog):
             return
         await self._toggle_role(payload.guild_id, payload.user_id)
 
+    @commands.Cog.listener()
+    async def on_member_join(self, member: Member):
+        role = await get_event_role(member.guild)
+        if member.get_role(role.id) is None:
+            await member.add_roles(role)
+            getLogger(__name__).info('Added event role to %s', member.name)
 
 

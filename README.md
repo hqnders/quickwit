@@ -16,8 +16,8 @@ The following environment variables are taken into account to configure running 
 | `DISCORD_TOKEN` | The token of the bot used to serve Quick Wit |
 | `ADMIN_USER_ID` | Optional user ID of who the bot will message when encountering an error |
 | `DISABLED_COGS` | Optional comma-seperated list of Cog names that will be disabled on starting up |
-| `EVENT_CHANNEL_CATEGORY` | Optional name of the event category to create event channels in |
-| `EVENT_ROLE` | Optional name of the role to ping for events |
+| `EVENT_CHANNEL_CATEGORY` | Optional case sensitive name of the event category to create event channels in |
+| `EVENT_ROLE` | Optional case sensitive name of the role to ping for events |
 | `ROLE_MESSAGE_IDS` | Optional comma-separated list of message IDs that users can react to to assign event roles |
 
 # Bot Requirements
