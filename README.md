@@ -1,7 +1,7 @@
 # quickwit
-Quick Wit is a Discord Event organiser bot, specifically for FF14 events. Created by `hqnders` on Discord for the Ex Animo Free Company.
+Quick Wit is a Discord Event organiser bot, specifically for FF14 events.
 
-To deploy (docker):
+To deploy (Docker):
 ```
 docker build -t quickwit:latest -f Dockerfile --network=host .
 docker volume create quickwit
@@ -12,7 +12,7 @@ docker container start quickwit
 ## Environment Variables
 The following environment variables are taken into account to configure running Quick Wit:
 | **Variable** | **Description** |
-| --- | --- | --- |
+| --- | --- |
 | `DISCORD_TOKEN` | The token of the bot used to serve Quick Wit |
 | `ADMIN_USER_ID` | Optional user ID of who the bot will message when encountering an error |
 | `DISABLED_COGS` | Optional comma-seperated list of Cog names that will be disabled on starting up |
@@ -30,7 +30,8 @@ while default users shall be allowed to send messages in the created thread.
 ## Emojis
 The bot will automatically use '❓' in place of emojis it cannot match by name.
 Specificially, it tries to search for every emoji without spaces and ignoring case sensitivity.
-Please register the following emojis for full event representation:
+<details><summary>Please register the following emojis for full event representation</summary>
+
 ```
 Start
 Duration
@@ -76,6 +77,8 @@ DarkKnight
 Viper
 ```
 
+</details>
+
 ## Intents
 The only intents necessary are `members` and `reactions`, as the bot reads people's name when mentioning who joined via scheduled event interest.
 
@@ -90,12 +93,13 @@ The following table provides an overview of which Cog interacts with which event
 ### Custom Events
 |**Cog**            |`event_created`|`event_altered`|`registrations_altered`|`event_deleted`|
 | ---               | ---           | ---           | ---                   | ---           |
-|**EventCRUD**      | Dispatches    | Dispatches    | Dispatches            |               |
+|**EventCRUD**      | Dispatches    | Dispatches    | Dispatches            | Dispatches    |
 |**ScheduledEvents**| Listens       | Both          | Dispatches            | Listens       |
 |**UI**             | Listens       | Listens       | Both                  |               |
 
 ### Built-in Events
-|**Cog**            |`scheduled_event_user_add` |`scheduled_event_user_remove`  |`guild_channel_delete` |
-| ---               | ---                       | ---                           | ---                   |
-|**EventCRUD**      |                           |                               | Listens               |
-|**ScheduledEvents**| Listens                   | Listens                       | Listens               |
+|**Cog**            |`scheduled_event_user_add` |`scheduled_event_user_remove`  |`guild_channel_delete` | `member_remove`   | `on_raw_reaction_add` | `on_raw_reaction_remove`  | `on_scheduled_event_delete`   |
+| ---               | ---                       | ---                           | ---                   | ---               | ---                   | ---                       | ---                           |
+|**EventCRUD**      |                           |                               | Listens               | Listens           |                       |                           |                               |
+|**ScheduledEvents**| Listens                   | Listens                       | Listens               |                   |                       |                           | Listens                       |
+|**Roles**          |                           |                               |                       |                   | Listens               | Listens                   |                               |
