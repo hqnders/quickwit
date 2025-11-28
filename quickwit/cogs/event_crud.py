@@ -14,7 +14,7 @@ DEFAULT_EVENT_DURATION_MINUTES = 60
 DEFAULT_REMINDER_MINUTES = 30
 MAX_EVENT_NAME_LENGTH = 25
 MAX_EVENT_DESCRIPTION_LENGTH = 1000
-EVENT_CHANNEL_CATEGORY = 'events'
+EVENT_CHANNEL_CATEGORY = 'Events'
 DEFAULT_EVENT_TYPE = EventType.FF14
 
 
@@ -110,8 +110,11 @@ class EventCRUD(commands.Cog):
             return
 
         # Get the event channel category, or create if necessary
-        event_channel_category = discord.utils.get(
-            interaction.guild.categories, name=EVENT_CHANNEL_CATEGORY)
+        event_channel_category = None
+        for category in interaction.guild.categories:
+            if category.name.lower() == EVENT_CHANNEL_CATEGORY.lower():
+                event_channel_category = category
+
         if event_channel_category is None:
             event_channel_category = await interaction.guild.create_category(
                 name=EVENT_CHANNEL_CATEGORY,

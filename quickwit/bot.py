@@ -51,7 +51,7 @@ class QuickWit(commands.Bot):
         await self.add_cog(cogs.EventCRUD(self))
         await self.add_cog(cogs.Timezone(self))
         await self.add_cog(cogs.Announce(self))
-        await self.add_cog(cogs.ScheduledEvents(self))
+        # await self.add_cog(cogs.ScheduledEvents(self))
         await self.add_cog(cogs.UI(self))
 
         try:
