@@ -91,7 +91,7 @@ class ScheduledEvents(commands.Cog):
         self.storage.store_event(event)
 
     @commands.Cog.listener()
-    async def on_event_created(self, event: Event, attachment: discord.Attachment | None):
+    async def on_event_created(self, event: Event, attachment: discord.Attachment | None, silent: bool):
         """Creates an event associated with the scheduled event"""
         if event.scheduled_event_id is not None:
             return

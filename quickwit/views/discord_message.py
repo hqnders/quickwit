@@ -37,14 +37,17 @@ class RegistrationMessage:
 class EventMessage:
     """Represents an event and it's associated message in Discord"""
 
-    def __init__(self, event: Event, emojis: Sequence[discord.Emoji], event_role: discord.Role):
+    def __init__(self, event: Event, emojis: Sequence[discord.Emoji], event_role: discord.Role | None):
         self.event_role = event_role
         self.emojis = emojis
         self.event = event
 
     def header_message(self) -> str:
         """Generates a Discord message representing the event header"""
-        return f'# {get_emoji_by_name(self.emojis, self.event.event_type)} {self.event.name}\n{self.event_role.mention}'  # noqa
+        header = f'# {get_emoji_by_name(self.emojis, self.event.event_type)} {self.event.name}'
+        if self.event_role is not None:
+            header += f'\n{self.event_role.mention}'
+        return header
 
     def body_message(self) -> str:
         """Generates a Discord formatted string representing the event body"""

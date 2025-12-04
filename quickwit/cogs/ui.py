@@ -47,7 +47,7 @@ class UI(commands.Cog):
         getLogger(__name__).info('Successfully loaded cog %s', __name__)
 
     @commands.Cog.listener()
-    async def on_event_created(self, event: Event, attachment: discord.Attachment | None):
+    async def on_event_created(self, event: Event, attachment: discord.Attachment | None, silent: bool):
         """Sends messages in the newly created event channel to represent the event and it's UI"""
         # Ensure the guild exists
         guild = await grab_by_id(event.guild_id, self.bot.get_guild, self.bot.fetch_guild)
@@ -71,7 +71,9 @@ class UI(commands.Cog):
             return
 
         # Send the event creation messages
-        event_role = await get_event_role(guild)
+        event_role = None
+        if not silent:
+            event_role = await get_event_role(guild)
         event_representation = EventMessage(
             event, self.emojis, event_role)
         file = None

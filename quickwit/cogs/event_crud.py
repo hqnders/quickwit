@@ -83,7 +83,8 @@ class EventCRUD(commands.Cog):
     async def create(self, interaction: discord.Interaction, name: str, description:
                      str, start: str, duration: int = DEFAULT_EVENT_DURATION_MINUTES,
                      event_type: discord.app_commands.Choice[str] = None,
-                     image: discord.Attachment = None, reminder: int = DEFAULT_REMINDER_MINUTES):
+                     image: discord.Attachment = None, reminder: int = DEFAULT_REMINDER_MINUTES,
+                     silent: bool = False):
         """Creates an event
 
         Args:
@@ -94,6 +95,7 @@ class EventCRUD(commands.Cog):
             event_type (discord.app_commands.Choice[str]): The type of event
             image (discord.Attachment): The cover image of the event
             reminder (int): Amount of minutes before start to send out a reminder at
+            silent (bool): Do not ping the event role on creation
         """
         try:
             validate_inputs(name, start, duration, image, reminder, description)
@@ -143,7 +145,7 @@ class EventCRUD(commands.Cog):
 
         getLogger(__name__).info('Created event \"%s\" (channel %i)',
                                  event.name, event_channel.id)
-        self.bot.dispatch('event_created', event, image)
+        self.bot.dispatch('event_created', event, image, silent)
 
     @discord.app_commands.command()
     async def edit(self, interaction: discord.Interaction, name: str = None,
