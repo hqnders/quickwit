@@ -36,7 +36,11 @@ class QuickWit(commands.Bot):
         # Notify admin of boot
         self.admin = await utils.grab_by_id(self._admin_user_id, self.get_user, self.fetch_user)
         if self.admin is not None:
-            await self.admin.send(content="Booting up")
+            try:
+                await self.admin.send(content="Booting up")
+            except discord.Forbidden:
+                logging.getLogger(__name__).warning(
+                    "Could not notify admin user %i of boot", self._admin_user_id)
 
     async def on_error(self, event_method: str, /, *_, **__):
         error = f'An error occured during execution of {event_method}:\n{sys.exception()}'

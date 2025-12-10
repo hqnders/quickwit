@@ -1,6 +1,7 @@
 """The announcement cog to announce to all registrations"""
 from logging import getLogger
-from discord import app_commands, Interaction, Thread
+from typing import cast
+from discord import app_commands, Interaction, Thread, TextChannel
 from discord.ext import commands, tasks
 from quickwit.utils import grab_by_id
 from .storage import Storage
@@ -11,7 +12,7 @@ class Announce(commands.Cog):
 
     def __init__(self, bot: commands.Bot):
         self.bot = bot
-        self.storage = self.bot.get_cog(Storage.__name__)
+        self.storage = cast(Storage, self.bot.get_cog(Storage.__name__))
         self.already_reminded = list[int]()
 
     async def cog_load(self):
@@ -29,9 +30,14 @@ class Announce(commands.Cog):
         Args:
             message (str): The announcement to make
         """
+        if interaction.channel is None or interaction.channel_id is None:
+            await interaction.response.send_message(
+                content='This command can only be used in an event channel', ephemeral=True)
+            return
+
         # Get channel_id from parent in case the channel is a thread
         channel_id = interaction.channel_id
-        if isinstance(interaction.channel, Thread):
+        if isinstance(interaction.channel, Thread) and interaction.channel.parent is not None:
             channel_id = interaction.channel.parent.id
 
         # Announcements can only be made from an event channel
@@ -63,14 +69,17 @@ class Announce(commands.Cog):
             if channel_id in self.already_reminded:
                 break
             event = self.storage.get_event(channel_id)
+            if event is None:
+                self.already_reminded.append(channel_id)
+                break
+
             channel = await grab_by_id(channel_id, self.bot.get_channel,
                                        self.bot.fetch_channel)
-            if channel is None:
+            if channel is None or not isinstance(channel, TextChannel):
                 self.already_reminded.append(channel_id)
                 break
             start = round(event.utc_start.timestamp())
-            message = f'{
-                event.name} by <@{event.organiser_id}> will start <t:{start}:R>\n'
+            message = f'{event.name} by <@{event.organiser_id}> will start <t:{start}:R>\n'
             for registration in event.registrations:
                 if registration.user_id != event.organiser_id:
                     message += f'<@{registration.user_id}>'

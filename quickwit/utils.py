@@ -11,13 +11,13 @@ T = TypeVar('T')
 EVENT_ROLE_NAME = os.getenv('EVENT_ROLE') or 'Events'
 
 async def grab_by_id(a_id: int, get_from_cache: Callable[[int], T],
-                     fetch_from_api: Coroutine[None, int, T]) -> T | None:
+                     fetch_from_api: Callable[[int], Coroutine[None, int, T]]) -> T | None:
     """Grabs a Discord resource by ID. First from cache, then from API calls
 
     Args:
         a_id (int): The ID of the item to grab
         get_from_cache (Callable[[int], T]): The method to get it from cache
-        fetch_from_api (Coroutine[None, int, T]): The method to fetch it from API
+        fetch_from_api Callable[[int], Coroutine[None, int, T]]: The method to fetch it from API
 
     Returns:
         T | None: The The resource

@@ -14,7 +14,12 @@ class Roles(commands.Cog):
         self.bot = bot
         self.storage = self.bot.get_cog(Storage.__name__)
         self.already_reminded = list[int]()
-        self.roles_message_ids = [int(message_id) for message_id in os.getenv('ROLE_MESSAGE_IDS').split(',')]
+        self.roles_message_ids = []
+        for message_id in os.getenv('ROLE_MESSAGE_IDS', '').split(','):
+            try:
+                self.roles_message_ids.append(int(message_id))
+            except ValueError:
+                continue
 
     async def cog_load(self):
         if self.storage is None:
@@ -24,9 +29,15 @@ class Roles(commands.Cog):
 
     async def _toggle_role(self, guild_id: int, user_id: int):
         guild = await grab_by_id(guild_id, self.bot.get_guild, self.bot.fetch_guild)
-        member = await grab_by_id(user_id, guild.get_member, guild.fetch_member)
-        role = await get_event_role(guild)
+        if guild is None:
+            return
         
+        member = await grab_by_id(user_id, guild.get_member, guild.fetch_member)
+        if member is None:
+            return
+        
+        role = await get_event_role(guild)
+
         if member.get_role(role.id) is None:
             await member.add_roles(role)
             getLogger(__name__).info('Added event role to %s', member.name)
@@ -36,13 +47,13 @@ class Roles(commands.Cog):
 
     @commands.Cog.listener()
     async def on_raw_reaction_add(self, payload: RawReactionActionEvent):
-        if payload.message_id not in self.roles_message_ids:
+        if payload.message_id not in self.roles_message_ids or payload.guild_id is None:
             return
         await self._toggle_role(payload.guild_id, payload.user_id)
 
     @commands.Cog.listener()
     async def on_raw_reaction_remove(self, payload: RawReactionActionEvent):
-        if payload.message_id not in self.roles_message_ids:
+        if payload.message_id not in self.roles_message_ids or payload.guild_id is None:
             return
         await self._toggle_role(payload.guild_id, payload.user_id)
 
@@ -52,5 +63,3 @@ class Roles(commands.Cog):
         if member.get_role(role.id) is None:
             await member.add_roles(role)
             getLogger(__name__).info('Added event role to %s', member.name)
-
-

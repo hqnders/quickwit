@@ -1,11 +1,13 @@
 """Cog to manage persistent storage"""
-import sqlite3
 import os
+import sqlite3
+from datetime import datetime, timezone
 from enum import StrEnum
 from logging import getLogger
-from datetime import datetime, timezone
+
 from discord.ext import commands
-from quickwit.models import Event, Registration, EventType
+
+from quickwit.models import Event, EventType, Registration
 
 DATA_FOLDER_NAME = 'data'
 DATABASE_NAME = 'events.db'
@@ -51,7 +53,7 @@ class Cache:
                 return
 
 
-class NecessaryScripts(StrEnum):
+class NecessaryScript(StrEnum):
     """Map all necessary scripts to filenames"""
     CREATION = 'create'
     SET_TIMEZONE = 'insert_or_update_user_timezones'
@@ -65,25 +67,25 @@ class Storage(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
         self.cache = Cache()
-    
+
     async def cog_load(self):
         database_path = os.path.join(DATA_FOLDER_NAME, DATABASE_NAME)
         if not os.path.exists(DATA_FOLDER_NAME):
             os.mkdir(DATA_FOLDER_NAME)
         self.conn = sqlite3.connect(database_path)
-        
+
         # Populate the scripts container with all necessary scripts
-        self.scripts = dict[NecessaryScripts, str]()
+        self.scripts = dict[str, str]()
         for file in os.listdir(SCRIPTS_PATH):
             filename = file.split('.')[0]
-            if filename in NecessaryScripts:
+            if filename in NecessaryScript:
                 with open(f'{SCRIPTS_PATH}/{file}', 'r', encoding='utf-8') as script:
                     self.scripts[filename] = script.read()
 
         # Turn on foreign key constraints and run the creation script
         self.conn.execute('PRAGMA foreign_keys = ON')
         self.conn.executescript(
-            self.scripts[NecessaryScripts.CREATION])
+            self.scripts[NecessaryScript.CREATION])
         self.conn.commit()
 
         self._modernize()
@@ -105,7 +107,7 @@ class Storage(commands.Cog):
         reminder = round(event.reminder.timestamp())
 
         # Store event in database
-        self.conn.execute(self.scripts[NecessaryScripts.STORE_EVENT], [
+        self.conn.execute(self.scripts[NecessaryScript.STORE_EVENT], [
             event.channel_id, event.event_type, event.name,
             event.description, event.scheduled_event_id,
             event.organiser_id, start, end, event.guild_id, reminder
@@ -206,12 +208,12 @@ class Storage(commands.Cog):
     def update_timezone(self, user_id: int, user_timezone: str):
         """Set a users timezone"""
         self.conn.execute(
-            self.scripts[NecessaryScripts.SET_TIMEZONE], [user_id, user_timezone])
+            self.scripts[NecessaryScript.SET_TIMEZONE], [user_id, user_timezone])
         self.conn.commit()
 
     def register(self, channel_id: int, registration: Registration):
         """Store a new registration"""
-        self.conn.execute(self.scripts[NecessaryScripts.REGISTER_USER],
+        self.conn.execute(self.scripts[NecessaryScript.REGISTER_USER],
                           [channel_id, registration.user_id, registration.job,
                            str(registration.status)])
         self.conn.commit()

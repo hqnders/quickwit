@@ -12,5 +12,9 @@ if __name__ == "__main__":
         sys.exit(1)
     disabled_cogs = os.getenv('DISABLED_COGS') or ""
     disabled_cogs = disabled_cogs.split(',')
-    quickwit = QuickWit(os.getenv('ADMIN_USER_ID'), disabled_cogs)
-    quickwit.run(token=os.getenv('DISCORD_TOKEN'))
+    admin_user_id = os.getenv('ADMIN_USER_ID')
+    if admin_user_id is None:
+        print('$ADMIN_USER_ID not set, cannot continue')
+        sys.exit(1)
+    quickwit = QuickWit(int(admin_user_id), disabled_cogs)
+    quickwit.run(token=token)

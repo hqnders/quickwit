@@ -1,13 +1,20 @@
 """Cog handling all CRUD operations for Events"""
 import os
-from datetime import timedelta, time, datetime
+from datetime import datetime, time, timedelta
 from logging import getLogger
+from typing import Optional, cast
+
 import discord
 import pytz
 from discord.ext import commands, tasks
+
 from quickwit.models import EventType, Event
-from quickwit.utils import grab_by_id, get_timezone_aware_datetime_from_supported_formats, \
-    get_datetime_from_supported_formats, get_event_role
+from quickwit.utils import (
+    get_datetime_from_supported_formats,
+    get_event_role,
+    get_timezone_aware_datetime_from_supported_formats,
+    grab_by_id,
+)
 from .storage import Storage
 
 MAX_EVENT_DURATION_MINUTES = 300
@@ -40,7 +47,7 @@ def validate_inputs(name: str | None, start: str | None, duration: int | None,
             raise ValueError(f'Duration must be between 1 and {
                 MAX_EVENT_DURATION_MINUTES}')
 
-    if image is not None:
+    if image is not None and image.content_type is not None:
         if not image.content_type.startswith('image/'):
             raise ValueError('Attachment must be an image')
 
@@ -57,7 +64,8 @@ class EventCRUD(commands.Cog):
 
     def __init__(self, bot: commands.Bot):
         self.bot = bot
-        self.storage = self.bot.get_cog(Storage.__name__)
+        self.storage: Storage = cast(
+            Storage, self.bot.get_cog(Storage.__name__))
 
     async def cog_load(self):
         if self.storage is None:
@@ -67,7 +75,7 @@ class EventCRUD(commands.Cog):
         self.prune_events.start()
         getLogger(__name__).info('Successfully loaded cog %s', __name__)
 
-    async def cog_app_command_error(self, interaction: discord.Interaction, _):
+    async def cog_app_command_error(self, interaction: discord.Interaction, error):
         message = 'Encountered an error, please contact the admin'
         if interaction.response.is_done():
             await interaction.followup.send(content=message, ephemeral=True)
@@ -82,8 +90,8 @@ class EventCRUD(commands.Cog):
             value=event_type) for event_type in EventType])
     async def create(self, interaction: discord.Interaction, name: str, description:
                      str, start: str, duration: int = DEFAULT_EVENT_DURATION_MINUTES,
-                     event_type: discord.app_commands.Choice[str] = None,
-                     image: discord.Attachment = None, reminder: int = DEFAULT_REMINDER_MINUTES,
+                     event_type: Optional[discord.app_commands.Choice[str]] = None,
+                     image: Optional[discord.Attachment] = None, reminder: int = DEFAULT_REMINDER_MINUTES,
                      silent: bool = False):
         """Creates an event
 
@@ -92,15 +100,21 @@ class EventCRUD(commands.Cog):
             description (str): The description of the event
             start (str): The start of the event ([DD-MM[-YYYY]] HH:MM)
             duration (int): The duration of the event in minutes
-            event_type (discord.app_commands.Choice[str]): The type of event
-            image (discord.Attachment): The cover image of the event
+            event_type (Optional[discord.app_commands.Choice[str]]): The type of event
+            image (Optional[discord.Attachment]): The cover image of the event
             reminder (int): Amount of minutes before start to send out a reminder at
             silent (bool): Do not ping the event role on creation
         """
         try:
-            validate_inputs(name, start, duration, image, reminder, description)
+            validate_inputs(name, start, duration,
+                            image, reminder, description)
         except ValueError as e:
             await interaction.response.send_message(content=e, ephemeral=True)
+            return
+
+        if interaction.guild is None or interaction.guild_id is None or type(interaction.user) != discord.Member:
+            await interaction.response.send_message(
+                content='This command can only be used in a server', ephemeral=True)
             return
 
         # Correct the start time to UTC based on user timezone
@@ -124,21 +138,19 @@ class EventCRUD(commands.Cog):
         # Create event channel
         event_channel = await interaction.guild.create_text_channel(
             name=name, category=event_channel_category, reason='Hosting an event')
-        
-        await event_channel.set_permissions(target=interaction.user, overwrite=discord.PermissionOverwrite(send_messages=True, manage_channels=True), reason="Giving event creator permissions");
-        await event_channel.set_permissions(target=await get_event_role(interaction.guild), overwrite=discord.PermissionOverwrite(view_channel=True, send_messages=False, send_messages_in_threads=True), reason="Giving event participant permissions");
-        
+
+        await event_channel.set_permissions(target=interaction.user, overwrite=discord.PermissionOverwrite(send_messages=True, manage_channels=True), reason="Giving event creator permissions")
+        await event_channel.set_permissions(target=await get_event_role(interaction.guild), overwrite=discord.PermissionOverwrite(view_channel=True, send_messages=False, send_messages_in_threads=True), reason="Giving event participant permissions")
+
         await interaction.response.send_message(
             content=f'Event {name} created! <#{event_channel.id}>', ephemeral=True)
 
         # Create and store the event
-        if event_type is None:
-            event_type = DEFAULT_EVENT_TYPE
-        else:
-            event_type = event_type.value
+        type_choice = EventType(
+            event_type.value) if event_type is not None else DEFAULT_EVENT_TYPE
         reminder_time = utc_start - timedelta(minutes=reminder)
         utc_end = utc_start + timedelta(minutes=duration)
-        event = Event(event_channel.id, event_type,
+        event = Event(event_channel.id, type_choice,
                       name, description, interaction.user.id,
                       utc_start, utc_end, interaction.guild_id, reminder_time, [])
         self.storage.store_event(event)
@@ -148,14 +160,20 @@ class EventCRUD(commands.Cog):
         self.bot.dispatch('event_created', event, image, silent)
 
     @discord.app_commands.command()
-    async def edit(self, interaction: discord.Interaction, name: str = None,
-                   start: str = None, description: str = None,
-                   duration: int = None, image: discord.Attachment = None, reminder: int = None):
+    async def edit(self, interaction: discord.Interaction, name: Optional[str] = None,
+                   start: Optional[str] = None, description: Optional[str] = None,
+                   duration: Optional[int] = None, image: Optional[discord.Attachment] = None, reminder: Optional[int] = None):
         """Edit an existing command, refer to `create` command description for further details"""
         try:
-            validate_inputs(name, start, duration, image, reminder, description)
+            validate_inputs(name, start, duration,
+                            image, reminder, description)
         except ValueError as e:
             await interaction.response.send_message(content=e, ephemeral=True)
+            return
+
+        if interaction.channel is None or interaction.channel_id is None or type(interaction.channel) != discord.TextChannel:
+            await interaction.response.send_message(
+                content='This command can only be used in an event channel', ephemeral=True)
             return
 
         # Events can only be edited from their respective channel
@@ -225,7 +243,7 @@ class EventCRUD(commands.Cog):
         channel_ids = self.storage.get_registered_event_ids(member.id)
         for channel_id in channel_ids:
             channel = await grab_by_id(channel_id, self.bot.get_channel, self.bot.fetch_channel)
-            if channel is not None:
+            if channel is not None and type(channel) == discord.TextChannel:
                 await channel.send(f'{member.display_name} unregistered by leaving the server')
 
             self.storage.unregister(channel_id, member.id)
@@ -242,6 +260,6 @@ class EventCRUD(commands.Cog):
         # Delete the channels
         for channel_id, _, __ in past_events:
             channel = await grab_by_id(channel_id, self.bot.get_channel, self.bot.fetch_channel)
-            if channel is not None:
+            if channel is not None and type(channel) == discord.TextChannel:
                 await channel.delete(reason='Event has ended')
         getLogger(__name__).info('Done pruning events')

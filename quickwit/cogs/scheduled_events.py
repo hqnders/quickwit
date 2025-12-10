@@ -1,8 +1,11 @@
 """Contains the cog for handling scheduled event hooks"""
 from logging import getLogger
+from typing import cast
+
 import discord
 from discord.ext import commands
-from quickwit.models import Status, Registration, Event
+
+from quickwit.models import Event, Registration, Status
 from quickwit.utils import grab_by_id
 from .storage import Storage
 
@@ -15,7 +18,7 @@ class ScheduledEvents(commands.Cog):
 
     def __init__(self, bot: commands.Bot):
         self.bot = bot
-        self.storage = self.bot.get_cog(Storage.__name__)
+        self.storage = cast(Storage, self.bot.get_cog(Storage.__name__))
 
     async def cog_load(self):
         if self.storage is None:
@@ -30,12 +33,12 @@ class ScheduledEvents(commands.Cog):
         # Ensure the event is associated with an event
         event = self.storage.get_event_from_scheduled_event_id(
             scheduled_event.id)
-        if event is None:
+        if event is None or scheduled_event.guild is None:
             return
 
         # Ensure the channel exists
         channel = await grab_by_id(event.channel_id, self.bot.get_channel, self.bot.fetch_channel)
-        if channel is None:
+        if channel is None or not isinstance(channel, discord.TextChannel):
             return
 
         # Attempt to get the member display name if they're part of the guild
@@ -58,12 +61,12 @@ class ScheduledEvents(commands.Cog):
         # Ensure the event is associated with an event
         event = self.storage.get_event_from_scheduled_event_id(
             scheduled_event.id)
-        if event is None:
+        if event is None or scheduled_event.guild is None:
             return
 
         # Ensure the channel exists
         channel = await grab_by_id(event.channel_id, self.bot.get_channel, self.bot.fetch_channel)
-        if channel is None:
+        if channel is None or not isinstance(channel, discord.TextChannel):
             return
 
         # Attempt to get the member display name if they're part of the guild
@@ -164,7 +167,7 @@ class ScheduledEvents(commands.Cog):
 
         # Edit the scheduled event
         location = f"<#{event.channel_id}>"
-        image_bytes = await scheduled_event.cover_image.read()
+        image_bytes = await scheduled_event.cover_image.read() if scheduled_event.cover_image is not None else bytes()
         if attachment is not None:
             image_bytes = await attachment.read()
 

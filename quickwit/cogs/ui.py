@@ -1,15 +1,18 @@
 """Contains the cog for handling registrations, as well as the necessary UI elements"""
-from typing import TypeAlias
 from logging import getLogger
+from typing import cast, TypeAlias
+
 import discord
 from discord.ext import commands
+
+from quickwit.models import Event, EventType, JOB_EVENT_JOB_TYPE_MAP, JobT, Registration, Status
 from quickwit.utils import get_event_role, grab_by_id
-from quickwit.views import JoinButton, LeaveButton, StatusSelect, JobSelect, EventMessage
-from quickwit.models import Status, JobT, Registration, Event, EventType, JOB_EVENT_JOB_TYPE_MAP
+from quickwit.views import EventMessage, JoinButton, JobSelect, LeaveButton, StatusSelect
 from .storage import Storage
 
 RegistrationData: TypeAlias = tuple[Status | None, JobT | None]
 DEFAULT_IMAGE_PATH = 'resources/img/default.png'
+DEFAULT_USER_PREFIX = 'quickwit'
 
 
 class UI(commands.Cog):
@@ -17,7 +20,7 @@ class UI(commands.Cog):
 
     def __init__(self, bot: commands.Bot):
         self.bot = bot
-        self.storage = self.bot.get_cog(Storage.__name__)
+        self.storage = cast(Storage, self.bot.get_cog(Storage.__name__))
         self.registration_data = dict[int, dict[int, RegistrationData]]()
         self.event_type_view_map = dict[EventType, discord.ui.View]()
 
@@ -30,7 +33,7 @@ class UI(commands.Cog):
         self.emojis = await self.bot.fetch_application_emojis()
 
         # Right now we're taking the bot's ID as the prefix to persistent UI elements
-        custom_id_prefix = str(self.bot.user.id)
+        custom_id_prefix = str(self.bot.user.id) if self.bot.user is not None else DEFAULT_USER_PREFIX
 
         # Generate the views for every event type and add them to the bot
         for event_type in EventType:
@@ -58,7 +61,7 @@ class UI(commands.Cog):
 
         # Ensure the channel exists within the guild
         channel = await grab_by_id(event.channel_id, guild.get_channel, guild.fetch_channel)
-        if channel is None:
+        if channel is None or not isinstance(channel, discord.TextChannel):
             getLogger(__name__).warning(
                 'Could not find channel %i within guild %i', event.channel_id, guild.id)
             return
@@ -76,11 +79,7 @@ class UI(commands.Cog):
             event_role = await get_event_role(guild)
         event_representation = EventMessage(
             event, self.emojis, event_role)
-        file = None
-        if attachment is None:
-            file = discord.File(DEFAULT_IMAGE_PATH)
-        if attachment is not None:
-            file = await attachment.to_file()
+        file = await attachment.to_file() if attachment is not None else discord.File(DEFAULT_IMAGE_PATH)
         await channel.send(content=event_representation.header_message(), file=file)
         await channel.send(content=event_representation.body_message(), view=view)
         await channel.create_thread(name='Discussion', type=discord.ChannelType.public_thread,
@@ -128,6 +127,9 @@ class UI(commands.Cog):
     @discord.app_commands.command()
     async def refresh_ui(self, interaction: discord.Interaction):
         """Refreshes all UI elements related to this channel's event"""
+        if interaction.channel_id is None:
+            return
+        
         event = self.storage.get_event(interaction.channel_id)
         if event is None:
             return
@@ -143,6 +145,12 @@ class UI(commands.Cog):
         await messages[1].edit(view=view)
 
     async def _join_callback(self, interaction: discord.Interaction):
+        if interaction.channel_id is None:
+            await interaction.response.send_message(
+                content='Could not determine the channel you are in, how did you get here?!',
+                ephemeral=True)
+            return
+
         # Ensure there is registration data to edit
         registration = self._ensure_existing_registration(
             interaction.user.id, interaction.channel_id)
@@ -166,7 +174,7 @@ class UI(commands.Cog):
         # Make sure event exists
         event = self.storage.get_event(interaction.channel_id)
         if event is None:
-            interaction.response.send_message(
+            await interaction.response.send_message(
                 content='UI Element is not associated with any event, how did you get here?!',
                 ephemeral=True)
             return
@@ -175,10 +183,16 @@ class UI(commands.Cog):
         self.bot.dispatch('registrations_altered', event)
 
     async def _leave_callback(self, interaction: discord.Interaction):
+        if interaction.channel_id is None:
+            await interaction.response.send_message(
+                content='Could not determine the channel you are in, how did you get here?!',
+                ephemeral=True)
+            return
+
         # Make sure event exists
         event = self.storage.get_event(interaction.channel_id)
         if event is None:
-            interaction.response.send_message(
+            await interaction.response.send_message(
                 content='UI Element is not associated with any event, how did you get here?!',
                 ephemeral=True)
             return
@@ -206,6 +220,12 @@ class UI(commands.Cog):
         self.bot.dispatch('registrations_altered', event)
 
     async def _status_callback(self, interaction: discord.Interaction, status: Status):
+        if interaction.channel_id is None:
+            await interaction.response.send_message(
+                content='Could not determine the channel you are in, how did you get here?!',
+                ephemeral=True)
+            return
+
         registration = self._ensure_existing_registration(
             interaction.user.id, interaction.channel_id)
         self.registration_data[interaction.user.id][interaction.channel_id] = (
@@ -213,6 +233,12 @@ class UI(commands.Cog):
         await interaction.response.defer()
 
     async def _job_callback(self, interaction: discord.Interaction, job: JobT):
+        if interaction.channel_id is None:
+            await interaction.response.send_message(
+                content='Could not determine the channel you are in, how did you get here?!',
+                ephemeral=True)
+            return
+
         registration = self._ensure_existing_registration(
             interaction.user.id, interaction.channel_id)
         self.registration_data[interaction.user.id][interaction.channel_id] = (
@@ -231,7 +257,7 @@ class UI(commands.Cog):
             -> tuple[discord.Message, discord.Message] | None:
         # Ensure the channel exists
         channel = await grab_by_id(channel_id, self.bot.get_channel, self.bot.fetch_channel)
-        if channel is None:
+        if channel is None or not isinstance(channel, discord.TextChannel):
             return None
 
         # Ensure event creation messages are present

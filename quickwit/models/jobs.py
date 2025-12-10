@@ -1,6 +1,6 @@
 """Contains all models necessary for job events"""
 from enum import StrEnum
-from typing import TypeVar
+from typing import Union
 
 
 # Discord only allows a maximum of 25 options
@@ -54,4 +54,4 @@ class CampfireEventJob(StrEnum):
     SPEAKER = 'Speaker'
 
 
-JobT = TypeVar('JobT', FF14Job, FashionShowJob, CampfireEventJob)
+JobT = Union[FF14Job, FashionShowJob, CampfireEventJob]

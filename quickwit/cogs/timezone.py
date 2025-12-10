@@ -1,5 +1,6 @@
 """The timezone cog for user timezone tracking"""
 from logging import getLogger
+from typing import cast
 import pytz
 import discord
 from discord.ext import commands
@@ -11,7 +12,7 @@ class Timezone(commands.Cog):
 
     def __init__(self, bot: commands.Bot):
         self.bot = bot
-        self.storage = self.bot.get_cog(Storage.__name__)
+        self.storage = cast(Storage, self.bot.get_cog(Storage.__name__))
 
     async def cog_load(self):
         if self.storage is None:
